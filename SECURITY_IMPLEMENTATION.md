@@ -10,12 +10,10 @@ This document details the security implementation for domain-specific API key au
 
 1. **Unauthorized Proxy Usage**
 
-
    - **Threat**: Attackers discovering proxy endpoint could use it without authorization
    - **Mitigation**: Domain-specific API keys required for access
 
 2. **Path Traversal Attacks**
-
 
    - **Threat**: Malicious Host headers like `../../../etc/passwd` to read arbitrary files
    - **Mitigation**: Path sanitization and validation in `getSafeCredentialPath()`
@@ -66,10 +64,7 @@ const keyHash = await crypto.subtle.digest('SHA-256', keyBuffer)
 
 // Use Node.js timing-safe comparison
 
-const isValid = cryptoTimingSafeEqual(
-  Buffer.from(tokenHash),
-  Buffer.from(keyHash)
-)
+const isValid = cryptoTimingSafeEqual(Buffer.from(tokenHash), Buffer.from(keyHash))
 ```
 
 ### Authentication Flow
@@ -142,7 +137,6 @@ Example log entry:
 
 Client authentication runs BEFORE rate limiting to:
 
-
 - Prevent unauthenticated requests from consuming rate limit quota
 - Protect against brute force attacks
 - Reduce load from unauthorized traffic
@@ -153,14 +147,12 @@ Client authentication runs BEFORE rate limiting to:
 
 1. **Path Traversal Tests**
 
-
    - Various injection patterns
    - URL encoding attempts
    - Null byte injection
    - Valid domains with dots
 
 2. **Authentication Tests**
-
 
    - Valid/invalid keys
    - Missing headers
