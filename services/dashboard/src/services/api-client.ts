@@ -25,6 +25,7 @@ interface RequestSummary {
   responseStatus: number
   error?: string
   requestType?: string
+  conversationId?: string
 }
 
 interface RequestsResponse {

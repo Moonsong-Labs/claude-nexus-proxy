@@ -184,7 +184,7 @@ export class StorageReader {
         SELECT 
           request_id, domain, timestamp, model, input_tokens, output_tokens,
           total_tokens, duration_ms, error, request_type, tool_call_count,
-          body, response_body
+          conversation_id, body, response_body
         FROM api_requests 
         WHERE request_id = $1
       `
@@ -211,6 +211,7 @@ export class StorageReader {
         error: row.error,
         request_type: row.request_type,
         tool_call_count: row.tool_call_count || 0,
+        conversation_id: row.conversation_id,
       }
 
       // Get streaming chunks

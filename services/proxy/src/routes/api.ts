@@ -43,6 +43,7 @@ interface RequestSummary {
   responseStatus: number
   error?: string
   requestType?: string
+  conversationId?: string
 }
 
 interface RequestDetails extends RequestSummary {
@@ -304,6 +305,7 @@ apiRoutes.get('/requests/:id', async c => {
         COALESCE(response_status, 0) as response_status,
         error,
         request_type,
+        conversation_id,
         body as request_body,
         response_body,
         usage_data
@@ -339,6 +341,7 @@ apiRoutes.get('/requests/:id', async c => {
       responseStatus: row.response_status,
       error: row.error,
       requestType: row.request_type,
+      conversationId: row.conversation_id,
       requestBody: row.request_body,
       responseBody: row.response_body,
       usageData: row.usage_data,
