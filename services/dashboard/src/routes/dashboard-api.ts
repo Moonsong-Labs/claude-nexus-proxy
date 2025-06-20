@@ -614,6 +614,7 @@ dashboardRoutes.get('/', async c => {
   const page = parseInt(c.req.query('page') || '1')
   const perPage = parseInt(c.req.query('per_page') || '50')
   const searchQuery = c.req.query('search')?.toLowerCase()
+  const excludeSubtasks = c.req.query('excludeSubtasks') === 'true'
 
   // Validate pagination params
   const currentPage = Math.max(1, page)
@@ -631,7 +632,11 @@ dashboardRoutes.get('/', async c => {
   try {
     // For now, fetch all and paginate in memory
     // TODO: Add offset/limit support to getConversationSummaries
-    const allConversationSummaries = await storageService.getConversationSummaries(domain, 10000)
+    const allConversationSummaries = await storageService.getConversationSummaries(
+      domain,
+      10000,
+      excludeSubtasks
+    )
 
     // Create flat list of conversation branches
     const conversationBranches: Array<{
@@ -643,6 +648,7 @@ dashboardRoutes.get('/', async c => {
       lastMessage: Date
       domain: string
       latestRequestId?: string
+      isSubtask?: boolean
     }> = []
 
     // We'll need to fetch full conversations to get request IDs
@@ -659,6 +665,7 @@ dashboardRoutes.get('/', async c => {
             lastMessage: new Date(branch.branch_end),
             domain: conv.domain,
             latestRequestId: branch.latest_request_id,
+            isSubtask: conv.has_subtasks === true,
           })
         })
       }
@@ -736,24 +743,39 @@ dashboardRoutes.get('/', async c => {
       </div>
 
       <!-- Domain Filter -->
-      <div style="margin-bottom: 1.5rem;">
-        <label class="text-sm text-gray-600">Filter by Domain:</label>
-        <select
-          onchange="window.location.href = '/dashboard' + (this.value ? '?domain=' + this.value : '?') + '&page=1&per_page=${itemsPerPage}${searchQuery
-            ? `&search=${encodeURIComponent(c.req.query('search') || '')}`
-            : ''}'"
-          style="margin-left: 0.5rem; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;"
-        >
-          <option value="">All Domains</option>
-          ${raw(
-            uniqueDomains
-              .map(
-                d =>
-                  `<option value="${escapeHtml(d)}" ${domain === d ? 'selected' : ''}>${escapeHtml(d)}</option>`
-              )
-              .join('')
-          )}
-        </select>
+      <div style="margin-bottom: 1.5rem; display: flex; gap: 2rem; align-items: center;">
+        <div>
+          <label class="text-sm text-gray-600">Filter by Domain:</label>
+          <select
+            onchange="window.location.href = '/dashboard' + (this.value ? '?domain=' + this.value : '?') + '&page=1&per_page=${itemsPerPage}${searchQuery
+              ? `&search=${encodeURIComponent(c.req.query('search') || '')}`
+              : ''}${c.req.query('excludeSubtasks') === 'true' ? '&excludeSubtasks=true' : ''}'"
+            style="margin-left: 0.5rem; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;"
+          >
+            <option value="">All Domains</option>
+            ${raw(
+              uniqueDomains
+                .map(
+                  d =>
+                    `<option value="${escapeHtml(d)}" ${domain === d ? 'selected' : ''}>${escapeHtml(d)}</option>`
+                )
+                .join('')
+            )}
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <input
+            type="checkbox"
+            id="excludeSubtasks"
+            ${c.req.query('excludeSubtasks') === 'true' ? 'checked' : ''}
+            onchange="const url = new URL(window.location); if(this.checked) { url.searchParams.set('excludeSubtasks', 'true'); } else { url.searchParams.delete('excludeSubtasks'); } url.searchParams.set('page', '1'); window.location.href = url.toString();"
+            style="width: 1rem; height: 1rem;"
+          />
+          <label for="excludeSubtasks" class="text-sm text-gray-600" style="cursor: pointer;">
+            Hide Sub-task Conversations
+          </label>
+        </div>
       </div>
 
       <!-- Stats Summary -->
@@ -822,6 +844,11 @@ dashboardRoutes.get('/', async c => {
                                    style="font-family: monospace; font-size: 0.75rem;">
                                   ${branch.conversationId.substring(0, 8)}...
                                 </a>
+                                ${
+                                  branch.isSubtask
+                                    ? '<span style="margin-left: 0.5rem; font-size: 0.875rem;" title="Sub-task conversation">🔗</span>'
+                                    : ''
+                                }
                               </td>
                               <td class="text-sm">
                                 ${

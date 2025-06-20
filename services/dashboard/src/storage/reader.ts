@@ -20,6 +20,9 @@ interface ApiRequest {
   parent_message_hash?: string
   branch_id?: string
   message_count?: number
+  parent_task_request_id?: string
+  is_subtask?: boolean
+  task_tool_invocation?: any
 }
 
 interface RequestDetails {
@@ -147,6 +150,10 @@ export class StorageReader {
         current_message_hash: row.current_message_hash,
         parent_message_hash: row.parent_message_hash,
         branch_id: row.branch_id,
+        message_count: row.message_count,
+        parent_task_request_id: row.parent_task_request_id,
+        is_subtask: row.is_subtask,
+        task_tool_invocation: row.task_tool_invocation,
       }))
 
       // Only cache if TTL > 0
@@ -424,7 +431,8 @@ export class StorageReader {
              request_id, domain, timestamp, model, 
              input_tokens, output_tokens, total_tokens, duration_ms,
              error, request_type, tool_call_count, conversation_id,
-             current_message_hash, parent_message_hash, branch_id, message_count
+             current_message_hash, parent_message_hash, branch_id, message_count,
+             parent_task_request_id, is_subtask, task_tool_invocation
            FROM api_requests 
            WHERE domain = $1 AND conversation_id = ANY($2::uuid[])
            ORDER BY conversation_id, timestamp ASC`
@@ -432,7 +440,8 @@ export class StorageReader {
              request_id, domain, timestamp, model, 
              input_tokens, output_tokens, total_tokens, duration_ms,
              error, request_type, tool_call_count, conversation_id,
-             current_message_hash, parent_message_hash, branch_id, message_count
+             current_message_hash, parent_message_hash, branch_id, message_count,
+             parent_task_request_id, is_subtask, task_tool_invocation
            FROM api_requests 
            WHERE conversation_id = ANY($1::uuid[])
            ORDER BY conversation_id, timestamp ASC`
@@ -464,6 +473,9 @@ export class StorageReader {
           parent_message_hash: row.parent_message_hash,
           branch_id: row.branch_id,
           message_count: row.message_count || 0,
+          parent_task_request_id: row.parent_task_request_id,
+          is_subtask: row.is_subtask,
+          task_tool_invocation: row.task_tool_invocation,
         }
 
         if (!requestsByConversation[row.conversation_id]) {
@@ -501,8 +513,12 @@ export class StorageReader {
    * Get conversation summaries without fetching all requests
    * More efficient for displaying conversation lists
    */
-  async getConversationSummaries(domain?: string, limit: number = 100): Promise<any[]> {
-    const cacheKey = `conversation-summaries:${domain || 'all'}:${limit}`
+  async getConversationSummaries(
+    domain?: string,
+    limit: number = 100,
+    excludeSubtasks: boolean = false
+  ): Promise<any[]> {
+    const cacheKey = `conversation-summaries:${domain || 'all'}:${limit}:${excludeSubtasks}`
     const cacheTTL = parseInt(process.env.DASHBOARD_CACHE_TTL || '30')
 
     // Only use cache if TTL > 0
@@ -526,9 +542,10 @@ export class StorageReader {
                MAX(message_count) as total_messages,
                SUM(total_tokens) as total_tokens,
                COUNT(DISTINCT branch_id) as branch_count,
-               array_agg(DISTINCT model) as models_used
+               array_agg(DISTINCT model) as models_used,
+               bool_or(is_subtask) as has_subtasks
              FROM api_requests
-             WHERE domain = $1 AND conversation_id IS NOT NULL
+             WHERE domain = $1 AND conversation_id IS NOT NULL ${excludeSubtasks ? 'AND (is_subtask IS NULL OR is_subtask = false)' : ''}
              GROUP BY conversation_id, domain
            ),
            conversation_branches AS (
@@ -557,7 +574,7 @@ export class StorageReader {
                   AND r2.branch_id = api_requests.branch_id 
                   ORDER BY r2.timestamp DESC LIMIT 1) as latest_request_id
                FROM api_requests
-               WHERE domain = $1 AND conversation_id IS NOT NULL
+               WHERE domain = $1 AND conversation_id IS NOT NULL ${excludeSubtasks ? 'AND (is_subtask IS NULL OR is_subtask = false)' : ''}
                GROUP BY conversation_id, branch_id
              ) b
              GROUP BY conversation_id
@@ -579,9 +596,10 @@ export class StorageReader {
                MAX(message_count) as total_messages,
                SUM(total_tokens) as total_tokens,
                COUNT(DISTINCT branch_id) as branch_count,
-               array_agg(DISTINCT model) as models_used
+               array_agg(DISTINCT model) as models_used,
+               bool_or(is_subtask) as has_subtasks
              FROM api_requests
-             WHERE conversation_id IS NOT NULL
+             WHERE conversation_id IS NOT NULL ${excludeSubtasks ? 'AND (is_subtask IS NULL OR is_subtask = false)' : ''}
              GROUP BY conversation_id, domain
            ),
            conversation_branches AS (
@@ -610,7 +628,7 @@ export class StorageReader {
                   AND r2.branch_id = api_requests.branch_id 
                   ORDER BY r2.timestamp DESC LIMIT 1) as latest_request_id
                FROM api_requests
-               WHERE conversation_id IS NOT NULL
+               WHERE conversation_id IS NOT NULL ${excludeSubtasks ? 'AND (is_subtask IS NULL OR is_subtask = false)' : ''}
                GROUP BY conversation_id, branch_id
              ) b
              GROUP BY conversation_id
@@ -637,6 +655,162 @@ export class StorageReader {
         error: getErrorMessage(error),
       })
       throw error
+    }
+  }
+
+  /**
+   * Get sub-tasks for a request
+   */
+  async getSubtasksForRequest(requestId: string): Promise<ApiRequest[]> {
+    try {
+      const query = `
+        SELECT * FROM api_requests 
+        WHERE parent_task_request_id = $1
+        ORDER BY timestamp ASC
+      `
+
+      const rows = await this.executeQuery<any>(query, [requestId], 'getSubtasksForRequest')
+
+      return rows.map(row => ({
+        request_id: row.request_id,
+        domain: row.domain,
+        timestamp: row.timestamp,
+        model: row.model,
+        input_tokens: row.input_tokens || 0,
+        output_tokens: row.output_tokens || 0,
+        total_tokens: row.total_tokens || 0,
+        duration_ms: row.duration_ms || 0,
+        error: row.error,
+        request_type: row.request_type,
+        tool_call_count: row.tool_call_count || 0,
+        conversation_id: row.conversation_id,
+        current_message_hash: row.current_message_hash,
+        parent_message_hash: row.parent_message_hash,
+        branch_id: row.branch_id,
+        message_count: row.message_count,
+        parent_task_request_id: row.parent_task_request_id,
+        is_subtask: row.is_subtask,
+        task_tool_invocation: row.task_tool_invocation,
+      }))
+    } catch (error) {
+      logger.error('Failed to get sub-tasks for request', {
+        metadata: {
+          requestId,
+          error: getErrorMessage(error),
+        },
+      })
+      return []
+    }
+  }
+
+  /**
+   * Get conversations with option to exclude sub-tasks
+   */
+  async getConversationsWithFilter(
+    domain?: string,
+    limit: number = 50,
+    excludeSubtasks: boolean = false
+  ): Promise<any[]> {
+    const cacheKey = `conversations:${domain || 'all'}:${limit}:${excludeSubtasks}`
+    const cacheTTL = parseInt(process.env.DASHBOARD_CACHE_TTL || '30')
+
+    if (cacheTTL > 0) {
+      const cached = this.cache.get<any[]>(cacheKey)
+      if (cached) {
+        return cached
+      }
+    }
+
+    try {
+      const whereClause = []
+      const values = []
+      let paramIndex = 1
+
+      if (domain) {
+        whereClause.push(`domain = $${paramIndex}`)
+        values.push(domain)
+        paramIndex++
+      }
+
+      if (excludeSubtasks) {
+        whereClause.push(`(is_subtask IS NULL OR is_subtask = false)`)
+      }
+
+      const whereString = whereClause.length > 0 ? `WHERE ${whereClause.join(' AND ')}` : ''
+
+      const query = `
+        SELECT conversation_id, 
+               MIN(timestamp) as first_message_time,
+               MAX(timestamp) as last_message_time,
+               COUNT(*) as request_count,
+               array_agg(DISTINCT domain) as domains,
+               array_agg(DISTINCT model) as models,
+               SUM(input_tokens) as total_input_tokens,
+               SUM(output_tokens) as total_output_tokens,
+               MAX(message_count) as max_message_count,
+               bool_or(is_subtask) as has_subtasks
+        FROM api_requests
+        ${whereString}
+        GROUP BY conversation_id
+        ORDER BY last_message_time DESC
+        LIMIT $${paramIndex}
+      `
+
+      values.push(limit)
+
+      const conversations = await this.executeQuery<any>(
+        query,
+        values,
+        'getConversationsWithFilter'
+      )
+
+      if (cacheTTL > 0) {
+        this.cache.set(cacheKey, conversations, cacheTTL)
+      }
+
+      return conversations
+    } catch (error) {
+      logger.error('Failed to get conversations with filter', {
+        metadata: {
+          domain,
+          excludeSubtasks,
+          error: getErrorMessage(error),
+        },
+      })
+      return []
+    }
+  }
+
+  /**
+   * Count sub-tasks for given parent request IDs
+   */
+  async countSubtasksForRequests(parentRequestIds: string[]): Promise<number> {
+    if (parentRequestIds.length === 0) {
+      return 0
+    }
+
+    try {
+      const query = `
+        SELECT COUNT(*) as count 
+        FROM api_requests 
+        WHERE parent_task_request_id = ANY($1::uuid[])
+      `
+      
+      const result = await this.executeQuery<{ count: string }>(
+        query,
+        [parentRequestIds],
+        'countSubtasksForRequests'
+      )
+      
+      return parseInt(result[0]?.count || '0')
+    } catch (error) {
+      logger.error('Failed to count sub-tasks', {
+        metadata: {
+          parentRequestIds: parentRequestIds.length,
+          error: getErrorMessage(error),
+        },
+      })
+      return 0
     }
   }
 

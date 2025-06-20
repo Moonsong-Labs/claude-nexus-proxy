@@ -57,7 +57,9 @@ export class MetricsService {
       currentMessageHash: string
       parentMessageHash: string | null
       conversationId: string
-    }
+    },
+    responseHeaders?: Record<string, string>,
+    fullResponseBody?: any
   ): Promise<void> {
     const metrics = response.getMetrics()
 
@@ -82,7 +84,15 @@ export class MetricsService {
 
     // Store in database
     if (this.config.enableStorage && this.storageService) {
-      await this.storeRequest(request, response, context, status, conversationData)
+      await this.storeRequest(
+        request,
+        response,
+        context,
+        status,
+        conversationData,
+        responseHeaders,
+        fullResponseBody
+      )
     }
 
     // Send telemetry
@@ -214,7 +224,9 @@ export class MetricsService {
       currentMessageHash: string
       parentMessageHash: string | null
       conversationId: string
-    }
+    },
+    responseHeaders?: Record<string, string>,
+    fullResponseBody?: any
   ): Promise<void> {
     if (!this.storageService) {
       return
@@ -268,8 +280,8 @@ export class MetricsService {
       await this.storageService.storeResponse({
         request_id: context.requestId,
         status_code: status,
-        headers: {}, // Response headers if needed
-        body: { content: response.content }, // Store as JSON
+        headers: responseHeaders || {}, // Store full response headers
+        body: fullResponseBody || { content: response.content }, // Store full response body if available, fallback to content
         timestamp: new Date(),
         input_tokens: metrics.inputTokens,
         output_tokens: metrics.outputTokens,
@@ -280,6 +292,11 @@ export class MetricsService {
         tool_call_count: metrics.toolCallCount,
         processing_time: context.getElapsedTime(),
       })
+
+      // Process Task tool invocations if we have the full response body
+      if (fullResponseBody) {
+        await this.storageService.processTaskToolInvocations(context.requestId, fullResponseBody)
+      }
     } catch (error) {
       logger.error('Failed to store request/response', {
         requestId: context.requestId,

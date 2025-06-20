@@ -29,8 +29,17 @@ function normalizeMessageContent(content: string | any[]): string {
   }
 
   // For array content, create a deterministic string representation
+  // Filter out system-reminder content items before processing
+  const filteredContent = content.filter((item) => {
+    // Skip text items that start with <system-reminder>
+    if (item.type === 'text' && typeof item.text === 'string') {
+      return !item.text.trim().startsWith('<system-reminder>')
+    }
+    return true
+  })
+  
   // DO NOT sort - preserve the original order as it's semantically important
-  return content
+  return filteredContent
     .map((item, index) => {
       // Extract only the essential fields, ignoring cache_control and other metadata
       switch (item.type) {

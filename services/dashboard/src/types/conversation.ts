@@ -18,6 +18,9 @@ export interface ConversationRequest {
   hasToolResult?: boolean
   messageTypeSummary?: string[]
   message_count?: number
+  parent_task_request_id?: string
+  is_subtask?: boolean
+  task_tool_invocation?: any
 }
 
 export interface ConversationSummary {

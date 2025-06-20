@@ -7,7 +7,7 @@
 import { Pool } from 'pg'
 import { randomUUID } from 'crypto'
 import { config } from 'dotenv'
-import { extractMessageHashes } from '../packages/shared/src/utils/conversation-hash.js'
+import { extractMessageHashes } from '../../packages/shared/dist/utils/conversation-hash.js'
 
 // Load environment variables
 config()

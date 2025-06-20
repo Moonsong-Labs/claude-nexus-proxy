@@ -196,17 +196,21 @@ dashboardRoutes.get('/', async c => {
     totalTokens: 0,
     estimatedCost: 0,
     activeDomains: 0,
+    totalSubtasks: 0,
+    activeTasksWithSubtasks: 0,
     recentRequests: [] as any[],
   }
 
   if (pool) {
     try {
-      // Get basic stats
+      // Get basic stats including sub-tasks
       const statsQuery = `
         SELECT 
           COUNT(*) as total_requests,
           SUM(COALESCE(total_tokens, COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0), 0)) as total_tokens,
-          COUNT(DISTINCT domain) as active_domains
+          COUNT(DISTINCT domain) as active_domains,
+          COUNT(*) FILTER (WHERE is_subtask = true) as total_subtasks,
+          COUNT(DISTINCT parent_task_request_id) FILTER (WHERE parent_task_request_id IS NOT NULL) as active_tasks_with_subtasks
         FROM api_requests
         WHERE timestamp > NOW() - INTERVAL '24 hours'
         ${domain ? 'AND domain = $1' : ''}
@@ -218,22 +222,34 @@ dashboardRoutes.get('/', async c => {
       stats.totalRequests = parseInt(row.total_requests) || 0
       stats.totalTokens = parseInt(row.total_tokens) || 0
       stats.activeDomains = parseInt(row.active_domains) || 0
+      stats.totalSubtasks = parseInt(row.total_subtasks) || 0
+      stats.activeTasksWithSubtasks = parseInt(row.active_tasks_with_subtasks) || 0
       stats.estimatedCost = (stats.totalTokens / 1000) * 0.002 // Rough estimate
 
-      // Get recent requests
+      // Get recent requests with sub-task information
       const requestsQuery = `
         SELECT 
-          request_id,
-          domain,
-          model,
-          COALESCE(total_tokens, COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0), 0) as total_tokens,
-          input_tokens,
-          output_tokens,
-          timestamp,
-          response_status
-        FROM api_requests
-        ${domain ? 'WHERE domain = $1' : ''}
-        ORDER BY timestamp DESC
+          r.request_id,
+          r.domain,
+          r.model,
+          COALESCE(r.total_tokens, COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0), 0) as total_tokens,
+          r.input_tokens,
+          r.output_tokens,
+          r.timestamp,
+          r.response_status,
+          r.is_subtask,
+          r.parent_task_request_id,
+          r.task_tool_invocation,
+          COALESCE(st.subtask_count, 0) as subtask_count
+        FROM api_requests r
+        LEFT JOIN (
+          SELECT parent_task_request_id, COUNT(*) as subtask_count
+          FROM api_requests
+          WHERE parent_task_request_id IS NOT NULL
+          GROUP BY parent_task_request_id
+        ) st ON r.request_id = st.parent_task_request_id
+        ${domain ? 'WHERE r.domain = $1' : ''}
+        ORDER BY r.timestamp DESC
         LIMIT 20
       `
 
@@ -296,6 +312,11 @@ dashboardRoutes.get('/', async c => {
         <div class="stat-value">${stats.activeDomains}</div>
         <div class="stat-meta">Unique domains</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-label">Sub-Task Calls</div>
+        <div class="stat-value">${stats.totalSubtasks.toLocaleString()}</div>
+        <div class="stat-meta">${stats.activeTasksWithSubtasks} parent tasks</div>
+      </div>
     </div>
 
     <!-- Recent Requests -->
@@ -321,6 +342,7 @@ dashboardRoutes.get('/', async c => {
                     <th>Model</th>
                     <th>Tokens</th>
                     <th>Status</th>
+                    <th>Sub-Tasks</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -334,6 +356,7 @@ dashboardRoutes.get('/', async c => {
                   <td class="text-sm">${req.model || 'N/A'}</td>
                   <td class="text-sm">${formatNumber(req.total_tokens || 0)}</td>
                   <td class="text-sm">${req.response_status || 'N/A'}</td>
+                  <td class="text-sm">${formatSubTaskInfo(req)}</td>
                 </tr>
               `
                       )
@@ -426,4 +449,15 @@ function formatNumber(num: number): string {
 function formatTimestamp(date: Date | string): string {
   const d = new Date(date)
   return d.toLocaleString()
+}
+
+function formatSubTaskInfo(req: any): string {
+  if (req.is_subtask) {
+    return '<span style="color: #6366f1;">✓ Sub-task</span>'
+  } else if (req.subtask_count > 0) {
+    return `<span style="color: #10b981;">⚡ ${req.subtask_count} sub-task${req.subtask_count > 1 ? 's' : ''}</span>`
+  } else if (req.task_tool_invocation) {
+    return '<span style="color: #f59e0b;">⏳ Task spawned</span>'
+  }
+  return '-'
 }

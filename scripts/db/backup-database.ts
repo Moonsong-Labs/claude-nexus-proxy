@@ -16,15 +16,9 @@ function formatTimestamp(): string {
   return now.toISOString().replace(/T/, '_').replace(/:/g, '-').replace(/\..+/, '')
 }
 
-function getDatabaseInfo(connectionString: string) {
+function getDatabaseName(connectionString: string): string {
   const url = new URL(connectionString)
-  return {
-    host: url.hostname,
-    port: url.port || '5432',
-    database: url.pathname.substring(1),
-    username: url.username,
-    password: url.password,
-  }
+  return url.pathname.substring(1)
 }
 
 async function backupDatabase() {
@@ -68,11 +62,8 @@ Options:
     process.exit(0)
   }
 
-  const dbInfo = getDatabaseInfo(databaseUrl)
+  const dbName = getDatabaseName(databaseUrl)
   const timestamp = formatTimestamp()
-
-  // Set PGPASSWORD environment variable for pg_dump
-  process.env.PGPASSWORD = dbInfo.password
 
   try {
     if (values.file !== undefined) {
@@ -83,15 +74,12 @@ Options:
           : `claude_nexus_backup_${timestamp}.sql`
 
       console.log(`Starting database backup to file: ${filename}`)
-      console.log(`Source database: ${dbInfo.database}`)
+      console.log(`Source database: ${dbName}`)
 
-      // Use pg_dump to export database to file
+      // Use pg_dump with connection string directly
       const dumpCommand = [
         'pg_dump',
-        `-h ${dbInfo.host}`,
-        `-p ${dbInfo.port}`,
-        `-U ${dbInfo.username}`,
-        `-d ${dbInfo.database}`,
+        `"${databaseUrl}"`,
         '--verbose',
         '--no-owner',
         '--no-privileges',
@@ -110,43 +98,26 @@ Options:
       console.log(`📊 File size: ${(stats / 1024 / 1024).toFixed(2)} MB`)
     } else {
       // Database backup mode
-      const backupDbName = `${dbInfo.database}_backup_${timestamp}`
+      const backupDbName = `${dbName}_backup_${timestamp}`
 
       console.log(`Starting database backup...`)
-      console.log(`Source database: ${dbInfo.database}`)
+      console.log(`Source database: ${dbName}`)
       console.log(`Backup database: ${backupDbName}`)
 
-      // First, create the backup database
+      // First, create the backup database using the postgres database
       console.log(`Creating backup database...`)
-      const createDbCommand = [
-        'psql',
-        `-h ${dbInfo.host}`,
-        `-p ${dbInfo.port}`,
-        `-U ${dbInfo.username}`,
-        '-d postgres',
-        `-c "CREATE DATABASE \\"${backupDbName}\\""`,
-      ].join(' ')
+      const postgresUrl = new URL(databaseUrl)
+      postgresUrl.pathname = '/postgres'
+      const createDbCommand = `psql "${postgresUrl.toString()}" -c "CREATE DATABASE \\"${backupDbName}\\""`
 
       execSync(createDbCommand, { stdio: 'inherit' })
 
-      // Then use pg_dump and pg_restore to copy the database
+      // Then use pg_dump and psql to copy the database
       console.log(`Copying database content...`)
-      const backupCommand = [
-        'pg_dump',
-        `-h ${dbInfo.host}`,
-        `-p ${dbInfo.port}`,
-        `-U ${dbInfo.username}`,
-        `-d ${dbInfo.database}`,
-        '--verbose',
-        '--no-owner',
-        '--no-privileges',
-        '|',
-        'psql',
-        `-h ${dbInfo.host}`,
-        `-p ${dbInfo.port}`,
-        `-U ${dbInfo.username}`,
-        `-d ${backupDbName}`,
-      ].join(' ')
+      const backupUrl = new URL(databaseUrl)
+      backupUrl.pathname = `/${backupDbName}`
+      
+      const backupCommand = `pg_dump "${databaseUrl}" --verbose --no-owner --no-privileges | psql "${backupUrl.toString()}"`
 
       execSync(backupCommand, { stdio: 'inherit', shell: true })
 
@@ -154,16 +125,11 @@ Options:
       console.log(`🗄️  Backup database: ${backupDbName}`)
 
       // Show connection string for the backup
-      const backupUrl = new URL(databaseUrl)
-      backupUrl.pathname = `/${backupDbName}`
       console.log(`🔗 Connection string: ${backupUrl.toString()}`)
     }
   } catch (error) {
     console.error('❌ Backup failed:', error instanceof Error ? error.message : String(error))
     process.exit(1)
-  } finally {
-    // Clean up PGPASSWORD
-    delete process.env.PGPASSWORD
   }
 }
 

@@ -130,9 +130,14 @@ export async function createDashboardApp(): Promise<Hono<{ Variables: { apiClien
     const storageService = container.getStorageService()
     const domain = c.req.query('domain')
     const limit = parseInt(c.req.query('limit') || '50')
+    const excludeSubtasks = c.req.query('excludeSubtasks') === 'true'
 
     try {
-      const conversations = await storageService.getConversations(domain, limit)
+      const conversations = await storageService.getConversationsWithFilter(
+        domain,
+        limit,
+        excludeSubtasks
+      )
       return c.json({
         status: 'ok',
         conversations,
@@ -141,6 +146,23 @@ export async function createDashboardApp(): Promise<Hono<{ Variables: { apiClien
     } catch (error) {
       logger.error('Failed to get conversations', { error: getErrorMessage(error) })
       return c.json({ error: 'Failed to retrieve conversations' }, 500)
+    }
+  })
+
+  app.get('/api/requests/:requestId/subtasks', async c => {
+    const storageService = container.getStorageService()
+    const requestId = c.req.param('requestId')
+
+    try {
+      const subtasks = await storageService.getSubtasksForRequest(requestId)
+      return c.json({
+        status: 'ok',
+        subtasks,
+        count: subtasks.length,
+      })
+    } catch (error) {
+      logger.error('Failed to get subtasks', { error: getErrorMessage(error), requestId })
+      return c.json({ error: 'Failed to retrieve subtasks' }, 500)
     }
   })
 

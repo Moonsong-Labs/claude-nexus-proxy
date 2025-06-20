@@ -65,6 +65,9 @@ export function calculateSimpleLayout(graph: ConversationGraph): GraphLayout {
       messageCount: node.messageCount,
       toolCallCount: node.toolCallCount,
       messageTypes: node.messageTypes,
+      isSubtask: node.isSubtask,
+      hasSubtasks: node.hasSubtasks,
+      subtaskCount: node.subtaskCount,
     })
 
     // Position children

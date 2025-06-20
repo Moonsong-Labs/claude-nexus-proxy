@@ -1,4 +1,5 @@
 import { Pool } from 'pg'
+import { createHash } from 'crypto'
 import { logger } from '../middleware/logger.js'
 
 interface StorageRequest {
@@ -17,6 +18,9 @@ interface StorageRequest {
   conversationId?: string
   branchId?: string
   messageCount?: number
+  parentTaskRequestId?: string
+  isSubtask?: boolean
+  taskToolInvocation?: any
 }
 
 interface StorageResponse {
@@ -64,10 +68,63 @@ export class StorageWriter {
    */
   async storeRequest(request: StorageRequest): Promise<void> {
     try {
-      // Remove sensitive headers
-      const sanitizedHeaders = { ...request.headers }
-      delete sanitizedHeaders['authorization']
-      delete sanitizedHeaders['x-api-key']
+      // Mask sensitive headers instead of removing them
+      const sanitizedHeaders = this.maskSensitiveHeaders(request.headers)
+
+      // Check if this is a new conversation that matches a recent Task invocation
+      let parentTaskRequestId = request.parentTaskRequestId
+      let isSubtask = request.isSubtask || false
+
+      // Check if this conversation is already marked as a sub-task
+      if (request.conversationId && request.parentMessageHash) {
+        // This is a continuation of an existing conversation
+        const existingConv = await this.pool.query(
+          'SELECT parent_task_request_id, is_subtask FROM api_requests WHERE conversation_id = $1 AND is_subtask = true LIMIT 1',
+          [request.conversationId]
+        )
+        if (existingConv.rows.length > 0 && existingConv.rows[0].is_subtask) {
+          parentTaskRequestId = existingConv.rows[0].parent_task_request_id
+          isSubtask = true
+          logger.debug('Continuing sub-task conversation', {
+            metadata: {
+              requestId: request.requestId,
+              conversationId: request.conversationId,
+              parentTaskRequestId,
+            },
+          })
+        }
+      } else if (!request.parentMessageHash && request.body?.messages?.length > 0) {
+        // Only check for sub-task matching if this is the first message in a conversation
+        const firstMessage = request.body.messages[0]
+        if (firstMessage?.role === 'user') {
+          const userContent = this.extractUserMessageContent(firstMessage)
+          logger.debug('Extracted user content for sub-task matching', {
+            metadata: {
+              requestId: request.requestId,
+              hasContent: !!userContent,
+              contentLength: userContent?.length || 0,
+              contentPreview: userContent?.substring(0, 100),
+            },
+          })
+          if (userContent) {
+            const match = await this.findMatchingTaskInvocation(userContent, request.timestamp)
+            if (match) {
+              parentTaskRequestId = match.request_id
+              isSubtask = true
+              logger.info('Found matching Task invocation for new conversation', {
+                requestId: request.requestId,
+                metadata: {
+                  parentTaskRequestId: match.request_id,
+                  contentLength: userContent.length,
+                  timeGapSeconds: Math.round(
+                    (request.timestamp.getTime() - new Date(match.timestamp).getTime()) / 1000
+                  ),
+                },
+              })
+            }
+          }
+        }
+      }
 
       // Detect if this is a branch in the conversation
       let branchId = request.branchId || 'main'
@@ -85,8 +142,9 @@ export class StorageWriter {
         INSERT INTO api_requests (
           request_id, domain, timestamp, method, path, headers, body, 
           api_key_hash, model, request_type, current_message_hash, 
-          parent_message_hash, conversation_id, branch_id, message_count
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          parent_message_hash, conversation_id, branch_id, message_count,
+          parent_task_request_id, is_subtask, task_tool_invocation
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         ON CONFLICT (request_id) DO NOTHING
       `
 
@@ -106,6 +164,9 @@ export class StorageWriter {
         request.conversationId || null,
         branchId,
         request.messageCount || 0,
+        parentTaskRequestId || null,
+        isSubtask,
+        request.taskToolInvocation ? JSON.stringify(request.taskToolInvocation) : null,
       ]
 
       await this.pool.query(query, values)
@@ -379,8 +440,196 @@ export class StorageWriter {
    * Hash API key for storage
    */
   private hashApiKey(apiKey: string): string {
-    // Simple hash for privacy (in production, use proper crypto)
-    return apiKey.substring(0, 8) + '...' + apiKey.substring(apiKey.length - 4)
+    if (!apiKey) {
+      return ''
+    }
+    // Use SHA-256 with a salt for secure hashing
+    const salt = process.env.API_KEY_SALT || 'claude-nexus-proxy-default-salt'
+    return createHash('sha256')
+      .update(apiKey + salt)
+      .digest('hex')
+  }
+
+  /**
+   * Mask sensitive headers
+   */
+  private maskSensitiveHeaders(headers: Record<string, string>): Record<string, string> {
+    const masked = { ...headers }
+    const sensitiveHeaders = ['authorization', 'x-api-key']
+
+    for (const [key, value] of Object.entries(headers)) {
+      const lowerKey = key.toLowerCase()
+      if (sensitiveHeaders.includes(lowerKey) && typeof value === 'string') {
+        if (value.length > 6) {
+          // Show only last 6 characters
+          masked[key] = '*'.repeat(Math.max(0, value.length - 6)) + value.slice(-6)
+        } else {
+          // For short values, mask entirely
+          masked[key] = '***'
+        }
+      }
+    }
+
+    return masked
+  }
+
+  /**
+   * Find Task tool invocations in a response
+   */
+  findTaskToolInvocations(responseBody: any): Array<{ id: string; name: string; input: any }> {
+    const taskInvocations: Array<{ id: string; name: string; input: any }> = []
+
+    if (!responseBody || !responseBody.content || !Array.isArray(responseBody.content)) {
+      return taskInvocations
+    }
+
+    for (const content of responseBody.content) {
+      if (content.type === 'tool_use' && content.name === 'Task') {
+        taskInvocations.push({
+          id: content.id,
+          name: content.name,
+          input: content.input,
+        })
+      }
+    }
+
+    return taskInvocations
+  }
+
+  /**
+   * Mark requests that have Task tool invocations
+   */
+  async markTaskToolInvocations(requestId: string, taskInvocations: any[]): Promise<void> {
+    if (taskInvocations.length === 0) {
+      return
+    }
+
+    try {
+      // Store task invocations in a separate tracking table or update the request
+      const query = `
+        UPDATE api_requests 
+        SET task_tool_invocation = $2
+        WHERE request_id = $1
+      `
+
+      await this.pool.query(query, [requestId, JSON.stringify(taskInvocations)])
+
+      logger.info('Marked request with Task tool invocations', {
+        requestId,
+        metadata: {
+          taskCount: taskInvocations.length,
+        },
+      })
+    } catch (error) {
+      logger.error('Failed to mark task tool invocations', {
+        requestId,
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      })
+    }
+  }
+
+  /**
+   * Extract user message content from various message formats
+   */
+  private extractUserMessageContent(message: any): string | null {
+    if (!message || message.role !== 'user') {
+      return null
+    }
+
+    // Handle string content
+    if (typeof message.content === 'string') {
+      return message.content
+    }
+
+    // Handle array content
+    if (Array.isArray(message.content)) {
+      // Look for text content in the array, skipping system reminders
+      for (const item of message.content) {
+        if (item.type === 'text' && item.text) {
+          // Skip system reminder messages
+          if (item.text.includes('<system-reminder>')) {
+            continue
+          }
+          return item.text
+        }
+      }
+
+      // If all text items were system reminders, return the first text item
+      for (const item of message.content) {
+        if (item.type === 'text' && item.text) {
+          return item.text
+        }
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * Find a matching Task invocation in the last 60 seconds
+   */
+  private async findMatchingTaskInvocation(
+    userContent: string,
+    timestamp: Date
+  ): Promise<{ request_id: string; timestamp: Date } | null> {
+    try {
+      logger.debug('Looking for matching Task invocation', {
+        metadata: {
+          contentLength: userContent.length,
+          contentPreview: userContent.substring(0, 100),
+          timestamp: timestamp.toISOString(),
+        },
+      })
+
+      // Look for Task invocations in the last 60 seconds
+      const query = `
+        SELECT request_id, timestamp
+        FROM api_requests
+        WHERE task_tool_invocation IS NOT NULL
+        AND timestamp >= $1::timestamp - interval '60 seconds'
+        AND timestamp <= $1::timestamp
+        AND jsonb_path_exists(
+          task_tool_invocation,
+          '$[*] ? (@.input.prompt == $prompt || @.input.description == $prompt)',
+          jsonb_build_object('prompt', $2::text)
+        )
+        ORDER BY timestamp DESC
+        LIMIT 1
+      `
+
+      const result = await this.pool.query(query, [timestamp.toISOString(), userContent])
+
+      if (result.rows.length > 0) {
+        logger.debug('Found matching Task invocation', {
+          metadata: {
+            parentRequestId: result.rows[0].request_id,
+            parentTimestamp: result.rows[0].timestamp,
+            timeDiffSeconds: Math.round(
+              (timestamp.getTime() - new Date(result.rows[0].timestamp).getTime()) / 1000
+            ),
+          },
+        })
+        return result.rows[0]
+      }
+
+      logger.debug('No matching Task invocation found', {
+        metadata: {
+          searchWindow: '60 seconds',
+        },
+      })
+
+      return null
+    } catch (error) {
+      logger.error('Failed to find matching task invocation', {
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+          query: error instanceof Error && 'message' in error ? error.message : undefined,
+        },
+      })
+      return null
+    }
   }
 
   /**
@@ -441,6 +690,11 @@ export async function initializeDatabase(pool: Pool): Promise<void> {
           current_message_hash CHAR(64),
           parent_message_hash CHAR(64),
           conversation_id UUID,
+          branch_id VARCHAR(255) DEFAULT 'main',
+          message_count INTEGER DEFAULT 0,
+          parent_task_request_id UUID REFERENCES api_requests(request_id),
+          is_subtask BOOLEAN DEFAULT false,
+          task_tool_invocation JSONB,
           created_at TIMESTAMPTZ DEFAULT NOW()
         )
       `)
