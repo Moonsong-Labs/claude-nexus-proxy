@@ -44,6 +44,7 @@
     "db:migrate:init": "bun run scripts/db/migrations/000-init-database.ts",
     "db:migrate:conversations": "bun run scripts/db/migrations/001-add-conversation-tracking.ts",
     "db:migrate:optimize": "bun run scripts/db/migrations/002-optimize-conversation-indexes.ts",
+    "db:migrate:token-usage": "bun run scripts/db/migrations/001-token-usage-tracking.ts",
     "db:analyze-conversations": "bun run scripts/db/analyze-conversations.ts",
     "db:rebuild-conversations": "bun run scripts/db/rebuild-conversations.ts",
     "db:recalculate-counts": "bun run scripts/db/recalculate-message-counts.ts",
@@ -74,6 +75,7 @@
     "typescript-eslint": "^8.18.0"
   },
   "dependencies": {
+    "lru-cache": "^11.1.0",
     "marked": "^15.0.12",
     "sanitize-html": "^2.17.0"
   }

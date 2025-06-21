@@ -58,7 +58,7 @@ export class ProxyService {
     }
 
     // Create domain entities
-    const request = new ProxyRequest(rawRequest, context.host, context.requestId, context.apiKey)
+    let request = new ProxyRequest(rawRequest, context.host, context.requestId, context.apiKey)
 
     const response = new ProxyResponse(context.requestId, request.isStreaming)
 
@@ -108,6 +108,41 @@ export class ProxyService {
     }
 
     try {
+      // Check rate limits before processing
+      const rateLimitCheck = await this.metricsService.checkRateLimits(context.host, request.model)
+      if (rateLimitCheck?.exceeded) {
+        // Log rate limit event
+        log.warn('Rate limit exceeded', {
+          model: request.model,
+          limit: rateLimitCheck.limit,
+          usage: rateLimitCheck.usage,
+          percentUsed: rateLimitCheck.percentUsed,
+        })
+        
+        // If fallback model is configured, switch to it
+        if (rateLimitCheck.fallbackModel) {
+          log.info('Switching to fallback model due to rate limit', {
+            originalModel: request.model,
+            fallbackModel: rateLimitCheck.fallbackModel,
+          })
+          
+          // Update the request to use fallback model
+          rawRequest.model = rateLimitCheck.fallbackModel
+          // Create new request with updated model
+          request = new ProxyRequest(rawRequest, context.host, context.requestId, context.apiKey)
+          
+          // Add header to indicate model switch
+          context.honoContext?.header('X-CNP-Model-Switched-To', rateLimitCheck.fallbackModel)
+          context.honoContext?.header('X-CNP-Model-Switch-Reason', 'rate-limit')
+        } else {
+          // No fallback configured, reject the request
+          const error = new Error(`Rate limit exceeded for model ${request.model}`)
+          ;(error as any).statusCode = 429
+          ;(error as any).rateLimitCheck = rateLimitCheck
+          throw error
+        }
+      }
+
       // Authenticate
       const auth = context.host.toLowerCase().includes('personal')
         ? await this.authService.authenticatePersonalDomain(context)

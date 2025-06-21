@@ -138,10 +138,27 @@ The proxy automatically tracks conversations and detects branches using message 
 
 ### Token Tracking
 
+**In-Memory Tracking (Legacy)**
 - Per-domain statistics
 - Request type classification (query evaluation vs inference)
 - Tool call counting
 - Available at `/token-stats` endpoint
+
+**Comprehensive Token Usage Tracking (New)**
+- Tracks ALL request types (including query_evaluation and quota)
+- Persistent storage in partitioned `token_usage` table
+- 5-hour rolling window support for rate limiting
+- Model-specific rate limits with automatic fallback
+- API endpoints:
+  - `/api/token-usage/current` - Current window usage
+  - `/api/token-usage/history` - Historical usage data
+  - `/api/rate-limits` - Configured rate limits
+
+**Rate Limiting**
+- Configurable per domain/model
+- Short-term limits (TPM/RPM) and long-term limits (5-hour windows)
+- Automatic model switching when limits are exceeded
+- Headers added on model switch: `X-CNP-Model-Switched-To` and `X-CNP-Model-Switch-Reason`
 
 ### Storage
 
@@ -217,6 +234,26 @@ Currently no automated tests. When implementing:
 - TypeScript compilation for production builds
 - Model-agnostic (accepts any model name)
 
+## Database Migrations
+
+### Run Token Usage Migration
+```bash
+bun run db:migrate:token-usage
+```
+
+This creates:
+- Partitioned `token_usage` table (monthly partitions)
+- `rate_limit_configs` table for configurable limits
+- `rate_limit_events` table for tracking limit hits
+- Helper functions for querying usage
+
+### Partition Maintenance
+The proxy automatically creates future partitions on startup and daily.
+Manual partition creation:
+```sql
+SELECT create_monthly_partitions(3); -- Creates 3 months ahead
+```
+
 ## Common Tasks
 
 ### Add Domain Credentials
@@ -253,4 +290,31 @@ curl http://localhost:3000/token-stats
 ```bash
 open http://localhost:3001
 # Use DASHBOARD_API_KEY for authentication
+```
+
+### Configure Rate Limits
+
+```bash
+# View current limits
+curl http://localhost:3000/api/rate-limits
+
+# Update limit (requires dashboard API key)
+curl -X POST http://localhost:3000/api/rate-limits \
+  -H "Authorization: Bearer $DASHBOARD_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 1,
+    "tokenLimit": 200000,
+    "fallbackModel": "claude-3-haiku-20240307"
+  }'
+```
+
+### Check Token Usage
+
+```bash
+# Current window usage
+curl "http://localhost:3000/api/token-usage/current?domain=example.com&model=claude-3-opus-20240229&window=300"
+
+# Historical usage
+curl "http://localhost:3000/api/token-usage/history?domain=example.com&start=2025-01-01&granularity=hour"
 ```

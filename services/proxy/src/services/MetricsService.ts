@@ -5,6 +5,7 @@ import { tokenTracker } from './tokenTracker.js'
 import { StorageAdapter } from '../storage/StorageAdapter.js'
 import { logger } from '../middleware/logger'
 import { broadcastConversation, broadcastMetrics } from '../dashboard/sse.js'
+import { TokenUsageService, RateLimitExceededError } from './TokenUsageService.js'
 
 export interface MetricsConfig {
   enableTokenTracking: boolean
@@ -42,7 +43,8 @@ export class MetricsService {
       enableTelemetry: true,
     },
     private storageService?: StorageAdapter,
-    private telemetryEndpoint?: string
+    private telemetryEndpoint?: string,
+    private tokenUsageService?: TokenUsageService
   ) {}
 
   /**
@@ -78,6 +80,11 @@ export class MetricsService {
         request.requestType === 'quota' ? undefined : request.requestType,
         metrics.toolCallCount
       )
+      
+      // Also track in TokenUsageService for rate limiting (tracks ALL request types)
+      if (this.tokenUsageService) {
+        await this.tokenUsageService.trackUsage(request, metrics, context.requestId)
+      }
     }
 
     // Store in database
@@ -200,6 +207,16 @@ export class MetricsService {
       return allStats[domain] || null
     }
     return allStats
+  }
+
+  /**
+   * Check rate limits before processing a request
+   */
+  async checkRateLimits(domain: string, model: string) {
+    if (!this.tokenUsageService) {
+      return null
+    }
+    return this.tokenUsageService.checkRateLimits(domain, model)
   }
 
   /**

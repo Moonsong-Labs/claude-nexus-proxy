@@ -406,3 +406,178 @@ apiRoutes.get('/domains', async c => {
     return c.json({ error: 'Failed to retrieve domains' }, 500)
   }
 })
+
+/**
+ * GET /api/token-usage/current - Get current window token usage
+ */
+apiRoutes.get('/token-usage/current', async c => {
+  const { container } = await import('../container.js')
+  const tokenUsageService = container.getTokenUsageService()
+  
+  if (!tokenUsageService) {
+    return c.json({ error: 'Token usage service not configured' }, 503)
+  }
+  
+  try {
+    const query = c.req.query()
+    const domain = query.domain
+    const model = query.model
+    const windowSeconds = query.window ? parseInt(query.window) : 300 // Default 5 minutes
+    
+    if (!domain || !model) {
+      return c.json({ error: 'Domain and model parameters are required' }, 400)
+    }
+    
+    const usage = await tokenUsageService.getUsageInWindow(domain, model, windowSeconds)
+    
+    // Get configured limits
+    const configs = await tokenUsageService.getRateLimitConfigs(domain, model)
+    const matchingConfig = configs.find(cfg => cfg.windowSeconds === windowSeconds)
+    
+    return c.json({
+      usage,
+      limit: matchingConfig,
+      percentUsed: matchingConfig?.tokenLimit 
+        ? (usage.totalTokens / matchingConfig.tokenLimit) * 100 
+        : null
+    })
+  } catch (error) {
+    logger.error('Failed to get current token usage', { error: getErrorMessage(error) })
+    return c.json({ error: 'Failed to retrieve token usage' }, 500)
+  }
+})
+
+/**
+ * GET /api/token-usage/history - Get historical token usage
+ */
+apiRoutes.get('/token-usage/history', async c => {
+  const { container } = await import('../container.js')
+  const tokenUsageService = container.getTokenUsageService()
+  
+  if (!tokenUsageService) {
+    return c.json({ error: 'Token usage service not configured' }, 503)
+  }
+  
+  try {
+    const query = c.req.query()
+    const domain = query.domain
+    const startDate = query.start ? new Date(query.start) : new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const endDate = query.end ? new Date(query.end) : new Date()
+    const granularity = query.granularity === 'day' ? 'day' : 'hour'
+    
+    if (!domain) {
+      return c.json({ error: 'Domain parameter is required' }, 400)
+    }
+    
+    const history = await tokenUsageService.getHistoricalUsage(domain, startDate, endDate, granularity)
+    
+    return c.json({ history })
+  } catch (error) {
+    logger.error('Failed to get historical token usage', { error: getErrorMessage(error) })
+    return c.json({ error: 'Failed to retrieve historical usage' }, 500)
+  }
+})
+
+/**
+ * GET /api/rate-limits - Get configured rate limits
+ */
+apiRoutes.get('/rate-limits', async c => {
+  const { container } = await import('../container.js')
+  const pool = container.getDbPool()
+  
+  if (!pool) {
+    return c.json({ error: 'Database not configured' }, 503)
+  }
+  
+  try {
+    const query = c.req.query()
+    const domain = query.domain
+    const model = query.model
+    
+    let conditions = ['is_active = true']
+    let values: any[] = []
+    let paramCount = 0
+    
+    if (domain) {
+      conditions.push(`(domain = $${++paramCount} OR domain IS NULL)`)
+      values.push(domain)
+    }
+    
+    if (model) {
+      conditions.push(`model = $${++paramCount}`)
+      values.push(model)
+    }
+    
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    
+    const result = await pool.query(`
+      SELECT 
+        id, domain, model, window_seconds, token_limit, request_limit,
+        fallback_model, priority, created_at, updated_at
+      FROM rate_limit_configs
+      ${whereClause}
+      ORDER BY priority DESC, domain DESC NULLS LAST, window_seconds ASC
+    `, values)
+    
+    const configs = result.rows.map(row => ({
+      id: row.id,
+      domain: row.domain,
+      model: row.model,
+      windowSeconds: row.window_seconds,
+      tokenLimit: row.token_limit,
+      requestLimit: row.request_limit,
+      fallbackModel: row.fallback_model,
+      priority: row.priority,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }))
+    
+    return c.json({ configs })
+  } catch (error) {
+    logger.error('Failed to get rate limit configs', { error: getErrorMessage(error) })
+    return c.json({ error: 'Failed to retrieve rate limit configurations' }, 500)
+  }
+})
+
+/**
+ * POST /api/rate-limits - Create or update rate limit configuration
+ */
+apiRoutes.post('/rate-limits', async c => {
+  const { container } = await import('../container.js')
+  const tokenUsageService = container.getTokenUsageService()
+  
+  if (!tokenUsageService) {
+    return c.json({ error: 'Token usage service not configured' }, 503)
+  }
+  
+  try {
+    const body = await c.req.json()
+    
+    // Validate required fields
+    if (!body.model || !body.windowSeconds) {
+      return c.json({ error: 'Model and windowSeconds are required' }, 400)
+    }
+    
+    if (!body.tokenLimit && !body.requestLimit) {
+      return c.json({ error: 'At least one of tokenLimit or requestLimit must be specified' }, 400)
+    }
+    
+    // If updating existing config
+    if (body.id) {
+      await tokenUsageService.updateRateLimitConfig({
+        id: body.id,
+        tokenLimit: body.tokenLimit,
+        requestLimit: body.requestLimit,
+        fallbackModel: body.fallbackModel,
+      })
+      
+      return c.json({ success: true, message: 'Rate limit updated' })
+    }
+    
+    // Create new config - would need to add this method to TokenUsageService
+    return c.json({ error: 'Creating new rate limits not yet implemented' }, 501)
+  } catch (error) {
+    logger.error('Failed to update rate limit', { error: getErrorMessage(error) })
+    return c.json({ error: 'Failed to update rate limit configuration' }, 500)
+  }
+})

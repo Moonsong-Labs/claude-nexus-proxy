@@ -247,6 +247,13 @@ async function initializeExternalServices(): Promise<void> {
     }
   }
 
+  // Schedule partition maintenance for token usage table
+  const tokenUsageService = container.getTokenUsageService()
+  if (tokenUsageService) {
+    const { schedulePartitionMaintenance } = await import('./tasks/partition-maintenance.js')
+    schedulePartitionMaintenance()
+  }
+
   // Log startup configuration
   logger.info('Proxy service starting', {
     metadata: {
@@ -257,6 +264,7 @@ async function initializeExternalServices(): Promise<void> {
         slack: config.slack.enabled,
         telemetry: config.telemetry.enabled,
         healthChecks: config.features.enableHealthChecks,
+        tokenUsageTracking: !!tokenUsageService,
       },
     },
   })
