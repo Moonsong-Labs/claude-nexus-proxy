@@ -90,7 +90,7 @@ export class TestSampleCollector {
       this.pendingSamples.set(sampleId, { sample, filename })
 
       logger.debug(`Test sample prepared: ${filename}`)
-      
+
       return sampleId
     } catch (error) {
       logger.error('Failed to collect test sample', error instanceof Error ? error : undefined)
@@ -150,7 +150,9 @@ export class TestSampleCollector {
   }
 
   private sanitizeResponseBody(body: any): any {
-    if (!body) return body
+    if (!body) {
+      return body
+    }
 
     // Create a deep copy
     const sanitized = JSON.parse(JSON.stringify(body))

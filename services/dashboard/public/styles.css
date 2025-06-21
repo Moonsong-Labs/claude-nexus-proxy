@@ -382,3 +382,90 @@ code {
     padding: 1rem;
   }
 }
+
+/* Message selection styles */
+.message-selected {
+  background-color: #eff6ff !important;
+  border-left: 3px solid #3b82f6;
+  transition: all 0.2s ease;
+  margin-left: -3px;
+}
+
+/* Copy button styling */
+.copy-message-link {
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0.25rem;
+  margin-top: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.copy-message-link:hover {
+  opacity: 1;
+  background-color: #f3f4f6;
+  color: #3b82f6;
+}
+
+.copy-message-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Toast notification */
+.toast-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #1f2937;
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+  max-width: 320px;
+}
+
+.toast-notification.toast-fade-out {
+  animation: slideOut 0.3s ease-out forwards;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Make message-meta position relative for button positioning */
+.message-meta {
+  position: relative;
+}
