@@ -17,6 +17,7 @@
     "declarationMap": true,
     "baseUrl": ".",
     "paths": {
+      "@claude-nexus/shared": ["../../packages/shared/src/index.ts"],
       "@claude-nexus/shared/*": ["../../packages/shared/src/*"]
     }
   },

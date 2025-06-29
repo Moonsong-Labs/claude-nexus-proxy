@@ -8,7 +8,7 @@ import { MetricsService } from './MetricsService'
 import { ClaudeMessagesRequest } from '../types/claude'
 import { logger } from '../middleware/logger'
 import { testSampleCollector } from './TestSampleCollector'
-import { extractMessageHashes, generateConversationId } from '@claude-nexus/shared'
+import { generateConversationId } from '@claude-nexus/shared'
 import { StorageAdapter } from '../storage/StorageAdapter.js'
 
 /**
@@ -74,37 +74,43 @@ export class ProxyService {
 
     // Extract conversation data if storage is enabled
     let conversationData:
-      | { currentMessageHash: string; parentMessageHash: string | null; conversationId: string }
+      | {
+          currentMessageHash: string
+          parentMessageHash: string | null
+          conversationId: string
+          systemHash: string | null
+          branchId?: string
+        }
       | undefined
 
     if (this.storageAdapter && rawRequest.messages && rawRequest.messages.length > 0) {
       try {
-        const { currentMessageHash, parentMessageHash } = extractMessageHashes(
+        // Use the new ConversationLinker through StorageAdapter
+        const linkingResult = await this.storageAdapter.linkConversation(
+          context.host,
           rawRequest.messages,
-          rawRequest.system
+          rawRequest.system,
+          context.requestId
         )
 
-        // Find or create conversation ID
-        let conversationId: string
-        if (parentMessageHash) {
-          // Try to find existing conversation
-          const existingConversationId =
-            await this.storageAdapter.findConversationByParentHash(parentMessageHash)
-          conversationId = existingConversationId || generateConversationId()
-        } else {
-          // This is the start of a new conversation
-          conversationId = generateConversationId()
+        // If no conversation ID was found, generate a new one
+        const conversationId = linkingResult.conversationId || generateConversationId()
+
+        conversationData = {
+          currentMessageHash: linkingResult.currentMessageHash,
+          parentMessageHash: linkingResult.parentMessageHash,
+          conversationId,
+          systemHash: linkingResult.systemHash,
+          branchId: linkingResult.branchId,
         }
 
-        conversationData = { currentMessageHash, parentMessageHash, conversationId }
-
         log.debug('Conversation tracking', {
-          currentMessageHash,
-          parentMessageHash,
+          currentMessageHash: linkingResult.currentMessageHash,
+          parentMessageHash: linkingResult.parentMessageHash,
           conversationId,
-          isNewConversation:
-            !parentMessageHash ||
-            !(await this.storageAdapter.findConversationByParentHash(parentMessageHash)),
+          branchId: linkingResult.branchId,
+          isNewConversation: !linkingResult.conversationId,
+          parentRequestId: linkingResult.parentRequestId,
         })
       } catch (error) {
         log.warn('Failed to extract conversation data', error as Error)
@@ -185,6 +191,7 @@ export class ProxyService {
       currentMessageHash: string
       parentMessageHash: string | null
       conversationId: string
+      systemHash: string | null
     },
     sampleId?: string
   ): Promise<Response> {
@@ -273,6 +280,7 @@ export class ProxyService {
       currentMessageHash: string
       parentMessageHash: string | null
       conversationId: string
+      systemHash: string | null
     },
     sampleId?: string
   ): Promise<Response> {
@@ -367,6 +375,7 @@ export class ProxyService {
       currentMessageHash: string
       parentMessageHash: string | null
       conversationId: string
+      systemHash: string | null
     },
     sampleId?: string
   ): Promise<void> {

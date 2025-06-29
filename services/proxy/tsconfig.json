@@ -4,7 +4,7 @@
     "module": "ES2022",
     "lib": ["ES2022"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -17,10 +17,11 @@
     "declarationMap": true,
     "baseUrl": ".",
     "paths": {
+      "@claude-nexus/shared": ["../../packages/shared/src/index.ts"],
       "@claude-nexus/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist"],
   "references": [{ "path": "../../packages/shared" }]
 }

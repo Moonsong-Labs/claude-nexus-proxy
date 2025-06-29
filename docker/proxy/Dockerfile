@@ -12,8 +12,9 @@ COPY . .
 # Install all dependencies
 RUN bun install
 
-# Build shared package
-RUN cd packages/shared && bun run build
+# Build shared package using root tsc build
+RUN bun x tsc --build packages/shared/tsconfig.json
+RUN cd packages/shared && ls -la dist/
 
 # Build production bundle
 RUN cd services/proxy && bun run build:production

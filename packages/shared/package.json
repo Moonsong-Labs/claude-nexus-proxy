@@ -20,7 +20,7 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && bun build ./src/index.ts --outdir ./dist --target bun && bun build ./src/types/index.ts --outdir ./dist/types --target bun && bun build ./src/config/index.ts --outdir ./dist/config --target bun && bun x tsc --emitDeclarationOnly",
+    "build": "rm -rf dist && bun x tsc --build",
     "watch": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
     "typecheck": "tsc --build"
   },

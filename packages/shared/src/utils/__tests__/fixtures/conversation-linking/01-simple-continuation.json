@@ -1,0 +1,52 @@
+{
+  "description": "Simple conversation continuation",
+  "type": "standard",
+  "expectedLink": true,
+  "parent": {
+    "request_id": "parent-001",
+    "domain": "test.com",
+    "conversation_id": "conv-001",
+    "branch_id": "main",
+    "current_message_hash": "07808462b02b7840b12ee78300eee39424cab59ec4615ca104b44c0fef611918",
+    "parent_message_hash": null,
+    "system_hash": "11ec99cfa6e6f58a352f4aee9cdb6d96e2eca86d437158f18efc6d4fe5909b07",
+    "body": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "What is 2+2?"
+        }
+      ],
+      "system": "You are a helpful assistant"
+    },
+    "response_body": {
+      "content": [
+        {
+          "text": "2 + 2 = 4",
+          "type": "text"
+        }
+      ]
+    }
+  },
+  "child": {
+    "request_id": "child-001",
+    "domain": "test.com",
+    "body": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "What is 2+2?"
+        },
+        {
+          "role": "assistant",
+          "content": "2 + 2 = 4"
+        },
+        {
+          "role": "user",
+          "content": "What is 3+3?"
+        }
+      ],
+      "system": "You are a helpful assistant"
+    }
+  }
+}

@@ -20,6 +20,7 @@ interface StorageRequest {
   parentMessageHash?: string | null
   conversationId?: string
   branchId?: string
+  systemHash?: string | null
   messageCount?: number
   parentTaskRequestId?: string
   isSubtask?: boolean
@@ -145,9 +146,9 @@ export class StorageWriter {
         INSERT INTO api_requests (
           request_id, domain, account_id, timestamp, method, path, headers, body, 
           api_key_hash, model, request_type, current_message_hash, 
-          parent_message_hash, conversation_id, branch_id, message_count,
+          parent_message_hash, conversation_id, branch_id, system_hash, message_count,
           parent_task_request_id, is_subtask, task_tool_invocation
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         ON CONFLICT (request_id) DO NOTHING
       `
 
@@ -167,6 +168,7 @@ export class StorageWriter {
         request.parentMessageHash || null,
         request.conversationId || null,
         branchId,
+        request.systemHash || null,
         request.messageCount || 0,
         parentTaskRequestId || null,
         isSubtask,
@@ -299,6 +301,157 @@ export class StorageWriter {
           error: error instanceof Error ? error.message : String(error),
         },
       })
+    }
+  }
+
+  /**
+   * Find parent requests based on criteria
+   * Used by ConversationLinker
+   */
+  async findParentRequests(criteria: {
+    domain: string
+    messageCount?: number
+    parentMessageHash?: string
+    currentMessageHash?: string
+    systemHash?: string | null
+    excludeRequestId?: string
+  }): Promise<
+    Array<{
+      request_id: string
+      conversation_id: string
+      branch_id: string
+      current_message_hash: string
+      system_hash: string | null
+    }>
+  > {
+    try {
+      const conditions: string[] = ['domain = $1']
+      const values: any[] = [criteria.domain]
+      let paramCount = 1
+
+      if (criteria.currentMessageHash) {
+        paramCount++
+        conditions.push(`current_message_hash = $${paramCount}`)
+        values.push(criteria.currentMessageHash)
+      }
+
+      if (criteria.parentMessageHash) {
+        paramCount++
+        conditions.push(`parent_message_hash = $${paramCount}`)
+        values.push(criteria.parentMessageHash)
+      }
+
+      if (criteria.systemHash !== undefined) {
+        paramCount++
+        if (criteria.systemHash === null) {
+          conditions.push(`system_hash IS NULL`)
+        } else {
+          conditions.push(`system_hash = $${paramCount}`)
+          values.push(criteria.systemHash)
+        }
+      }
+
+      if (criteria.messageCount !== undefined) {
+        paramCount++
+        conditions.push(`message_count = $${paramCount}`)
+        values.push(criteria.messageCount)
+      }
+
+      if (criteria.excludeRequestId) {
+        paramCount++
+        conditions.push(`request_id != $${paramCount}`)
+        values.push(criteria.excludeRequestId)
+      }
+
+      const query = `
+        SELECT 
+          request_id,
+          conversation_id,
+          branch_id,
+          current_message_hash,
+          system_hash
+        FROM api_requests
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY timestamp DESC
+        LIMIT 100
+      `
+
+      const result = await this.pool.query(query, values)
+      return result.rows
+    } catch (error) {
+      logger.error('Failed to find parent requests', {
+        metadata: {
+          criteria,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      })
+      return []
+    }
+  }
+
+  /**
+   * Find parent request by searching response content
+   * Used for compact conversation detection
+   */
+  async findParentByResponseContent(
+    domain: string,
+    summaryContent: string,
+    beforeTimestamp: Date
+  ): Promise<{
+    request_id: string
+    conversation_id: string
+    branch_id: string
+    current_message_hash: string
+    system_hash: string | null
+  } | null> {
+    try {
+      // Search for requests where the response contains the summary
+      // Escape SQL LIKE special characters to prevent injection
+      const escapedContent = summaryContent
+        .toLowerCase()
+        .replace(/[\\%_]/g, '\\$&') // Escape SQL LIKE wildcards
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim()
+
+      // Use parameterized query with proper escaping
+      const query = `
+        SELECT 
+          request_id,
+          conversation_id,
+          branch_id,
+          current_message_hash,
+          system_hash
+        FROM api_requests
+        WHERE domain = $1
+          AND timestamp > $2
+          AND response_body IS NOT NULL
+          AND LOWER(response_body::text) LIKE '%' || $3 || '%'
+          AND conversation_id IS NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+      `
+
+      const result = await this.pool.query(query, [domain, beforeTimestamp, escapedContent])
+
+      if (result.rows.length > 0) {
+        logger.info('Found parent conversation by response content match', {
+          metadata: {
+            domain,
+            parentRequestId: result.rows[0].request_id,
+            conversationId: result.rows[0].conversation_id,
+          },
+        })
+      }
+
+      return result.rows[0] || null
+    } catch (error) {
+      logger.error('Failed to find parent by response content', {
+        metadata: {
+          domain,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      })
+      return null
     }
   }
 

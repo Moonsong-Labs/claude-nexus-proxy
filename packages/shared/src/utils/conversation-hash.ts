@@ -221,7 +221,43 @@ export function hashConversationStateWithSystem(
 }
 
 /**
- * Extracts the current and parent conversation state hashes
+ * Hashes only the messages without system prompt
+ * @param messages - Array of messages
+ * @returns A hash representing the messages only
+ */
+export function hashMessagesOnly(messages: ClaudeMessage[]): string {
+  if (!messages || messages.length === 0) {
+    return ''
+  }
+
+  // Create a deterministic representation of all messages
+  const conversationString = messages
+    .map((msg, index) => `[${index}]${msg.role}:${normalizeMessageContent(msg.content)}`)
+    .join('||')
+
+  return createHash('sha256').update(conversationString, 'utf8').digest('hex')
+}
+
+/**
+ * Hashes only the system prompt
+ * @param system - System prompt (string or array of content blocks)
+ * @returns A hash of the system prompt or null if no system
+ */
+export function hashSystemPrompt(system?: string | any[]): string | null {
+  if (!system) {
+    return null
+  }
+
+  const stableSystemContent = getStableSystemPrompt(system)
+  if (!stableSystemContent) {
+    return null
+  }
+
+  return createHash('sha256').update(stableSystemContent, 'utf8').digest('hex')
+}
+
+/**
+ * Extracts the current and parent conversation state hashes (dual hash system)
  *
  * For Claude conversations, we need to handle the pattern where:
  * - First request: [user_msg]
@@ -231,11 +267,58 @@ export function hashConversationStateWithSystem(
  * To find the parent, we look for a request whose full message list matches
  * a prefix of our current messages (excluding the last 2 messages - the latest exchange)
  *
+ * NEW: Returns separate hashes for messages and system to enable conversation linking
+ * that survives system prompt changes
+ *
  * @param messages - Array of messages from the request
  * @param system - Optional system prompt (string or array of content blocks)
- * @returns Object containing current state hash and parent state hash
+ * @returns Object containing message hashes and system hash
  */
 export function extractMessageHashes(
+  messages: ClaudeMessage[],
+  system?: string | any[]
+): {
+  currentMessageHash: string
+  parentMessageHash: string | null
+  systemHash: string | null
+} {
+  if (!messages || messages.length === 0) {
+    throw new Error('Cannot extract hashes from empty messages array')
+  }
+
+  // Hash messages only (no system) for conversation linking
+  const currentMessageHash = hashMessagesOnly(messages)
+
+  // Hash system separately for tracking context changes
+  const systemHash = hashSystemPrompt(system)
+
+  // For parent hash, we need to find the previous request state
+  // If we have 3+ messages, the parent likely had all messages except the last 2 (user + assistant)
+  // If we have 1-2 messages, this is likely a new conversation
+  let parentMessageHash: string | null = null
+
+  if (messages.length === 1) {
+    // First message in conversation, no parent
+    parentMessageHash = null
+  } else if (messages.length === 2) {
+    // This shouldn't happen in normal Claude conversations (should be user -> assistant -> user)
+    // But handle it anyway - parent would be first message only
+    parentMessageHash = hashMessagesOnly(messages.slice(0, 1))
+  } else {
+    // Normal case: we have at least 3 messages
+    // The parent request would have had all messages except the last 2
+    // (removing the most recent user message and the assistant response before it)
+    parentMessageHash = hashMessagesOnly(messages.slice(0, -2))
+  }
+
+  return { currentMessageHash, parentMessageHash, systemHash }
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use extractMessageHashes which returns the dual hash system
+ */
+export function extractMessageHashesLegacy(
   messages: ClaudeMessage[],
   system?: string | any[]
 ): {

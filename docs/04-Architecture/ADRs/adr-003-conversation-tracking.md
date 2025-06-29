@@ -133,13 +133,38 @@ CREATE INDEX idx_message_hashes ON api_requests(parent_message_hash, current_mes
 
 This approach has proven effective in production, enabling powerful conversation analytics without requiring any changes to client applications. The branch detection feature has been particularly valuable for understanding how users explore different conversation paths.
 
+### Enhancement: Dual Hash System (2025-06-28)
+
+The original implementation included system prompts in the conversation hash, which caused issues when system prompts changed between sessions (e.g., git status in Claude Code, context compaction). This was resolved by implementing a dual hash system:
+
+**Changes:**
+
+1. **Separate Message Hash**: `hashMessagesOnly()` - Hashes only the message content for conversation linking
+2. **Separate System Hash**: `hashSystemPrompt()` - Hashes only the system prompt for tracking context changes
+3. **Updated `extractMessageHashes()`**: Now returns three values:
+   - `currentMessageHash` - Message-only hash for linking
+   - `parentMessageHash` - Parent message hash for branching
+   - `systemHash` - System prompt hash for context tracking
+
+**Benefits:**
+
+- Conversations maintain links even when system prompts change
+- System context changes can be tracked independently
+- Backward compatible with existing data
+
+**Migration:**
+
+- Added `system_hash` column to `api_requests` table
+- Existing data can be backfilled using `scripts/db/backfill-system-hashes.ts`
+
 Future enhancements could include:
 
 - Conversation merging detection
 - Semantic similarity for fuzzy matching
 - Conversation templates and patterns
+- System prompt change visualization in dashboard
 
 ---
 
-Date: 2024-02-01
+Date: 2024-02-01 (Updated: 2025-06-28)
 Authors: Development Team

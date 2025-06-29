@@ -56,6 +56,8 @@
     "auth:generate-key": "bun run scripts/auth/generate-api-key.ts",
     "auth:oauth-status": "bun run scripts/auth/check-oauth-status.ts",
     "auth:oauth-refresh": "bun run scripts/auth/oauth-refresh-all.ts",
+    "test:generate-fixture": "bun run scripts/generate-conversation-test-fixture.ts",
+    "test:generate": "bun run scripts/generate-conversation-test.ts",
     "docker:secrets": "./scripts/create-docker-secrets.sh",
     "setup": "bun install && bun run build:shared",
     "format": "prettier --write .",

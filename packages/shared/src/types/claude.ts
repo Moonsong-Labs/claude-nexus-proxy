@@ -36,7 +36,7 @@ export interface ClaudeTool {
 export interface ClaudeMessagesRequest {
   model: string
   messages: ClaudeMessage[]
-  system?: string
+  system?: string | { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }[]
   max_tokens: number
   metadata?: {
     user_id?: string

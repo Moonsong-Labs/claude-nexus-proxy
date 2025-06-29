@@ -93,5 +93,15 @@ export default tseslint.config(
     rules: {
       'no-console': 'off',
     },
+  },
+
+  // Override for test files to use test tsconfig
+  {
+    files: ['**/*.test.ts', '**/__tests__/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.json', './packages/*/tsconfig.test.json'],
+      },
+    },
   }
 )

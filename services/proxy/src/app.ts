@@ -13,7 +13,7 @@ import { initializeDatabase } from './storage/writer.js'
 import { apiAuthMiddleware } from './middleware/api-auth.js'
 import { domainExtractorMiddleware } from './middleware/domain-extractor.js'
 import { clientAuthMiddleware } from './middleware/client-auth.js'
-import { HonoVariables, HonoBindings } from '@claude-nexus/shared/types'
+import { HonoVariables, HonoBindings } from '@claude-nexus/shared'
 
 /**
  * Create and configure the Proxy application

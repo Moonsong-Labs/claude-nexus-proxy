@@ -162,6 +162,13 @@ The proxy automatically tracks conversations and detects branches using message 
 - **Duplicate messages are deduplicated**: When tool_use or tool_result messages have duplicate IDs, only the first occurrence is included in the hash
 - This ensures conversations link correctly regardless of content format, system reminder presence, or duplicate messages from the Claude API
 
+**Dual Hash System (NEW):**
+
+- **Message Hash**: Used for conversation linking, contains only message content
+- **System Hash**: Tracks system prompt separately, stored in `system_hash` column
+- This allows conversations to maintain links even when system prompts change (e.g., git status updates, context compaction)
+- Backward compatible: Old conversations continue to work without modification
+
 **API Endpoints:**
 
 - `/api/conversations` - Get conversations grouped by conversation_id with branch information

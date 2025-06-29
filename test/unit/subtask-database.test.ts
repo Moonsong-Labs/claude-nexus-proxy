@@ -147,10 +147,10 @@ describe('Sub-task Database Logic', () => {
       expect(insertQuery).toContain('parent_task_request_id')
       expect(insertQuery).toContain('is_subtask')
 
-      // Check that parent_task_request_id was set (17th value, index 16)
-      expect(insertValues[16]).toEqual(parentTaskId)
-      // Check that is_subtask was set to true (18th value, index 17)
-      expect(insertValues[17]).toBe(true)
+      // Check that parent_task_request_id was set (18th value, index 17)
+      expect(insertValues[17]).toEqual(parentTaskId)
+      // Check that is_subtask was set to true (19th value, index 18)
+      expect(insertValues[18]).toBe(true)
     })
 
     it('should not link sub-task when no matching parent exists', async () => {
@@ -196,8 +196,8 @@ describe('Sub-task Database Logic', () => {
       const insertValues = insertCall[1]
 
       // Verify sub-task fields were NOT set
-      expect(insertValues[16]).toBeNull() // parent_task_request_id
-      expect(insertValues[17]).toBe(false) // is_subtask
+      expect(insertValues[17]).toBeNull() // parent_task_request_id
+      expect(insertValues[18]).toBe(false) // is_subtask
     })
 
     it('should skip sub-task detection for non-first messages', async () => {
@@ -256,9 +256,9 @@ describe('Sub-task Database Logic', () => {
       const insertCall = mockPool.query.mock.calls[3]
       const insertValues = insertCall[1]
 
-      // Verify defaults were used (indices 16 and 17)
-      expect(insertValues[16]).toBeNull() // parent_task_request_id
-      expect(insertValues[17]).toBe(false) // is_subtask
+      // Verify defaults were used (indices 17 and 18)
+      expect(insertValues[17]).toBeNull() // parent_task_request_id
+      expect(insertValues[18]).toBe(false) // is_subtask
     })
 
     it('should handle array message content with system reminders', async () => {
