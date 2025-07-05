@@ -32,22 +32,24 @@ What becomes easier or more difficult to do because of this change?
 
 ## Current ADRs
 
-| ADR                                                   | Title                               | Status   | Date       |
-| ----------------------------------------------------- | ----------------------------------- | -------- | ---------- |
-| [ADR-001](./adr-001-monorepo-structure.md)            | Monorepo Structure                  | Accepted | 2024-01-15 |
-| [ADR-002](./adr-002-separate-docker-images.md)        | Separate Docker Images              | Accepted | 2024-01-20 |
-| [ADR-003](./adr-003-conversation-tracking.md)         | Conversation Tracking Design        | Accepted | 2024-02-01 |
-| [ADR-004](./adr-004-proxy-authentication.md)          | Proxy-Level Authentication          | Accepted | 2024-06-25 |
-| [ADR-005](./adr-005-token-usage-tracking.md)          | Comprehensive Token Usage Tracking  | Accepted | 2024-06-25 |
-| [ADR-006](./adr-006-long-running-requests.md)         | Support for Long-Running Requests   | Accepted | 2024-06-25 |
-| [ADR-007](./adr-007-subtask-tracking.md)              | Sub-task Detection and Tracking     | Accepted | 2024-06-25 |
-| [ADR-008](./adr-008-cicd-strategy.md)                 | CI/CD Strategy with GitHub Actions  | Accepted | 2024-06-25 |
-| [ADR-009](./adr-009-dashboard-architecture.md)        | Dashboard Architecture with HTMX    | Accepted | 2024-06-25 |
-| [ADR-010](./adr-010-docker-cli-integration.md)        | Docker-Based Claude CLI Integration | Accepted | 2024-06-25 |
-| [ADR-011](./adr-011-future-decisions.md)              | Future Architectural Decisions      | Proposed | 2024-06-25 |
-| [ADR-012](./adr-012-database-schema-evolution.md)     | Database Schema Evolution Strategy  | Accepted | 2025-06-26 |
-| [ADR-013](./adr-013-typescript-project-references.md) | TypeScript Project References       | Accepted | 2025-06-27 |
-| [ADR-014](./adr-014-sql-query-logging.md)             | SQL Query Logging                   | Accepted | 2025-06-30 |
+| ADR                                                      | Title                               | Status   | Date       |
+| -------------------------------------------------------- | ----------------------------------- | -------- | ---------- |
+| [ADR-001](./adr-001-monorepo-structure.md)               | Monorepo Structure                  | Accepted | 2024-01-15 |
+| [ADR-002](./adr-002-separate-docker-images.md)           | Separate Docker Images              | Accepted | 2024-01-20 |
+| [ADR-003](./adr-003-conversation-tracking.md)            | Conversation Tracking Design        | Accepted | 2024-02-01 |
+| [ADR-004](./adr-004-proxy-authentication.md)             | Proxy-Level Authentication          | Accepted | 2024-06-25 |
+| [ADR-005](./adr-005-token-usage-tracking.md)             | Comprehensive Token Usage Tracking  | Accepted | 2024-06-25 |
+| [ADR-006](./adr-006-long-running-requests.md)            | Support for Long-Running Requests   | Accepted | 2024-06-25 |
+| [ADR-007](./adr-007-subtask-tracking.md)                 | Sub-task Detection and Tracking     | Accepted | 2024-06-25 |
+| [ADR-008](./adr-008-cicd-strategy.md)                    | CI/CD Strategy with GitHub Actions  | Accepted | 2024-06-25 |
+| [ADR-009](./adr-009-dashboard-architecture.md)           | Dashboard Architecture with HTMX    | Accepted | 2024-06-25 |
+| [ADR-010](./adr-010-docker-cli-integration.md)           | Docker-Based Claude CLI Integration | Accepted | 2024-06-25 |
+| [ADR-011](./adr-011-future-decisions.md)                 | Future Architectural Decisions      | Proposed | 2024-06-25 |
+| [ADR-012](./adr-012-database-schema-evolution.md)        | Database Schema Evolution Strategy  | Accepted | 2025-06-26 |
+| [ADR-013](./adr-013-typescript-project-references.md)    | TypeScript Project References       | Accepted | 2025-06-27 |
+| [ADR-014](./adr-014-sql-query-logging.md)                | SQL Query Logging                   | Accepted | 2025-06-30 |
+| [ADR-015](./adr-015-subtask-conversation-migration.md)   | Subtask Conversation Migration      | Accepted | 2025-01-07 |
+| [ADR-016](./adr-016-ai-powered-conversation-analysis.md) | AI-Powered Conversation Analysis    | Accepted | 2025-01-08 |
 
 ## Creating a New ADR
 

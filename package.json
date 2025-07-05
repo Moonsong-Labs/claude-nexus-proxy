@@ -67,6 +67,7 @@
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "@faker-js/faker": "^9.8.0",
+    "@types/glob": "^9.0.0",
     "@types/pg": "^8.11.10",
     "bun-types": "latest",
     "concurrently": "^8.2.2",

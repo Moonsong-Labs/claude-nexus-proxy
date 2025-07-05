@@ -97,6 +97,71 @@ Populates the account_id column based on known domain-to-account mappings:
 - Creates performance index on (account_id, timestamp)
 - Safe to run multiple times (idempotent)
 
+### 006-split-conversation-hashes.ts
+
+Separates system prompt hashing from message content hashing:
+
+- Adds `system_hash` column for tracking system prompt changes
+- Allows conversations to maintain links when system prompts change
+- Creates index on system_hash for efficient queries
+- Backward compatible with existing conversations
+
+### 007-add-parent-request-id.ts
+
+Adds direct parent request linking:
+
+- `parent_request_id` - UUID reference to immediate parent request
+- Foreign key constraint ensures referential integrity
+- Populates existing data by matching parent/child message hashes
+- Creates index for efficient parent-child queries
+
+### 008-subtask-updates-and-task-indexes.ts
+
+Optimizes Task tool queries and updates subtask conversation IDs:
+
+- Updates subtasks to inherit parent conversation IDs
+- Fixes branch numbering for consistency
+- Creates specialized indexes for Task invocation queries
+- Adds GIN index on response_body for efficient JSONB searches
+
+### 009-add-response-body-gin-index.ts
+
+Creates full GIN index on response_body:
+
+- Enables efficient containment queries with @> operator
+- Supports complex JSONB queries for Task tool detection
+- Improves performance for subtask linking
+
+### 010-add-temporal-awareness-indexes.ts
+
+Adds indexes for temporal queries:
+
+- Composite index on (conversation_id, timestamp)
+- Partial index for subtask sequence queries
+- Optimizes historical rebuild and temporal awareness features
+
+### 011-add-conversation-analyses.ts
+
+Creates infrastructure for AI-powered conversation analysis:
+
+- `conversation_analyses` table for storing AI-generated analyses
+- ENUM type `conversation_analysis_status` for processing states
+- Automatic `updated_at` trigger for timestamp management
+- Unique constraint on (conversation_id, branch_id)
+- Optimized indexes for pending analyses and conversation lookups
+- Supports multiple AI models and comprehensive token tracking
+
+### 012-add-analysis-audit-log.ts
+
+Creates audit logging infrastructure for AI analysis security:
+
+- `analysis_audit_log` table for tracking all analysis-related events
+- Event types: ANALYSIS_REQUEST, ANALYSIS_REGENERATION_REQUEST, etc.
+- Outcome tracking: SUCCESS, FAILURE_AUTH, FAILURE_RATE_LIMIT, etc.
+- Comprehensive metadata storage with JSONB fields
+- Indexes for efficient querying by conversation, domain, and timestamp
+- Supports security monitoring and compliance requirements
+
 ## Future Migrations
 
 When adding new migrations:

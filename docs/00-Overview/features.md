@@ -4,6 +4,14 @@ Claude Nexus Proxy is a high-performance proxy for the Claude API with comprehen
 
 ## Core Features
 
+### 🧠 AI-Powered Conversation Analysis
+
+- **Smart Prompt Engineering**: Automated analysis of conversations using Gemini AI
+- **Intelligent Truncation**: Tail-first priority preserving most recent context
+- **Structured Insights**: JSON-formatted analysis with sentiment, outcomes, and quality metrics
+- **Token Management**: Safe truncation with 855k token limit and safety margins
+- **Versioned Prompts**: Support for evolving analysis templates
+
 ### 🚀 API Proxying
 
 - **Direct API forwarding** to Claude with minimal latency

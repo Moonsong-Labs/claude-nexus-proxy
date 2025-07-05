@@ -566,25 +566,57 @@ export class ProxyApiClient {
   }
 
   /**
+   * Generic GET method for API calls
+   */
+  async get<T = unknown>(path: string): Promise<T> {
+    try {
+      const url = new URL(path, this.baseUrl)
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: this.getHeaders(),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}) as any)
+        const error: any = new Error(
+          (errorData as any).error || `API error: ${response.status} ${response.statusText}`
+        )
+        error.status = response.status
+        throw error
+      }
+
+      return (await response.json()) as T
+    } catch (error) {
+      logger.error('API GET request failed', {
+        error: getErrorMessage(error),
+        path,
+      })
+      throw error
+    }
+  }
+
+  /**
    * Generic POST method for API calls
    */
-  async post(path: string, body: any): Promise<any> {
+  async post<T = unknown>(path: string, body?: unknown): Promise<T> {
     try {
       const url = new URL(path, this.baseUrl)
       const response = await fetch(url.toString(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify(body),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}) as any)
-        throw new Error(
+        const error: any = new Error(
           (errorData as any).error || `API error: ${response.status} ${response.statusText}`
         )
+        error.status = response.status
+        throw error
       }
 
-      return await response.json()
+      return (await response.json()) as T
     } catch (error) {
       logger.error('API POST request failed', {
         error: getErrorMessage(error),

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { html, raw } from 'hono/html'
 import { getErrorMessage } from '@claude-nexus/shared'
+import { csrfProtection } from '../middleware/csrf.js'
 import {
   ConversationGraph,
   ConversationNode,
@@ -15,7 +16,14 @@ import {
 } from '../utils/conversation-metrics.js'
 import type { ConversationRequest } from '../types/conversation.js'
 
-export const conversationDetailRoutes = new Hono()
+export const conversationDetailRoutes = new Hono<{
+  Variables: {
+    csrfToken?: string
+  }
+}>()
+
+// Apply CSRF protection to all routes
+conversationDetailRoutes.use('*', csrfProtection())
 
 /**
  * Detailed conversation view with graph visualization
@@ -826,6 +834,24 @@ conversationDetailRoutes.get('/conversation/:id', async c => {
         </div>
       </div>
 
+      <!-- AI Analysis Panel -->
+      <div
+        id="analysis-panel"
+        hx-get="/partials/analysis/status/${conversationId}/${selectedBranch || 'main'}"
+        hx-trigger="load"
+        hx-swap="outerHTML"
+        style="margin-top: 2rem;"
+      >
+        <div class="section">
+          <div class="section-content">
+            <div style="display: flex; align-items: center; gap: 0.75rem; color: #6b7280;">
+              <span class="spinner"></span>
+              <span>Loading AI Analysis...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <script>
         // Tab switching functionality
         function switchTab(tabName) {
@@ -987,7 +1013,7 @@ conversationDetailRoutes.get('/conversation/:id', async c => {
 
     // Use the shared layout
     const { layout } = await import('../layout/index.js')
-    return c.html(layout('Conversation Detail', content))
+    return c.html(layout('Conversation Detail', content, '', c))
   } catch (error) {
     console.error('Error loading conversation detail:', error)
     const { layout } = await import('../layout/index.js')
@@ -998,7 +1024,9 @@ conversationDetailRoutes.get('/conversation/:id', async c => {
           <div class="error-banner">
             <strong>Error:</strong> ${getErrorMessage(error) || 'Failed to load conversation'}
           </div>
-        `
+        `,
+        '',
+        c
       )
     )
   }

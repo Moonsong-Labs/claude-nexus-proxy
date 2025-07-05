@@ -295,6 +295,79 @@ GET /api/conversations/:id
 }
 ```
 
+#### Conversation Analysis (Pending Implementation)
+
+**Note:** These endpoints are planned for Phase 2 implementation. Currently only the database schema is in place.
+
+##### Create Analysis Request
+
+```http
+POST /api/analyses
+```
+
+Creates a new analysis request for a conversation.
+
+**Request:**
+
+```json
+{
+  "conversation_id": "uuid",
+  "branch_id": "main" // optional, defaults to "main"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "123456",
+  "conversation_id": "uuid",
+  "branch_id": "main",
+  "status": "pending",
+  "created_at": "2024-01-15T10:00:00Z"
+}
+```
+
+##### Get Analysis
+
+```http
+GET /api/analyses/:conversationId/:branchId
+```
+
+Retrieves the analysis for a specific conversation and branch.
+
+**Response:**
+
+```json
+{
+  "id": "123456",
+  "conversation_id": "uuid",
+  "branch_id": "main",
+  "status": "completed",
+  "model_used": "gemini-2.5-pro",
+  "analysis_content": "This conversation shows...",
+  "analysis_data": {
+    "summary": "...",
+    "insights": ["..."],
+    "metrics": {...}
+  },
+  "generated_at": "2024-01-15T10:05:00Z",
+  "processing_duration_ms": 2500,
+  "prompt_tokens": 1000,
+  "completion_tokens": 500
+}
+```
+
+##### Regenerate Analysis
+
+```http
+POST /api/analyses/:conversationId/:branchId/regenerate
+```
+
+Forces regeneration of an existing analysis.
+
+**Response:** Same as Get Analysis endpoint.
+
 #### Token Analytics
 
 ```http

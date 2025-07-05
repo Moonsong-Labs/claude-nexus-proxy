@@ -13,6 +13,7 @@ Technical decisions are documented in `docs/ADRs/`. Key architectural decisions:
 - **ADR-001**: Example ADR
 - **ADR-012**: Database Schema Evolution Strategy - TypeScript migrations with init SQL
 - **ADR-013**: TypeScript Project References - Monorepo type checking solution
+- **ADR-016**: AI-Powered Conversation Analysis - Background job architecture for AI analysis
 
 **AI Assistant Directive**: When discussing architecture or making technical decisions, always reference relevant ADRs. If a new architectural decision is made during development, create or update an ADR to document it. This ensures all technical decisions have clear rationale and can be revisited if needed.
 
@@ -46,6 +47,7 @@ claude-nexus-proxy/
 - Token tracking and telemetry
 - Request/response storage
 - Slack notifications
+- AI-powered conversation analysis (Phase 2 - Prompt Engineering with full env var support)
 
 **Dashboard Service** (`services/dashboard/`)
 
@@ -561,6 +563,77 @@ When generating message hashes for conversation tracking, the system filters out
 
 - Uses `X-Dashboard-Key` header (not Authorization)
 - Cookie-based auth also supported for browser sessions
+
+### AI-Powered Conversation Analysis
+
+The proxy supports automated analysis of conversations using AI models (currently Gemini 2.5 Pro):
+
+**Features:**
+
+- Background processing of conversations for insights
+- Status tracking (pending, processing, completed, failed)
+- Token usage tracking for cost management
+- Retry logic with exponential backoff
+- Unique analyses per conversation and branch
+- Comprehensive environment variable configuration for prompt tuning
+
+**Database Schema:**
+
+- `conversation_analyses` table stores analysis results
+- ENUM type for status field ensures data integrity
+- Automatic `updated_at` timestamp via trigger
+- Partial index on pending status for efficient queue processing
+
+**API Endpoints:**
+
+- `POST /api/analyses` - Create analysis request
+- `GET /api/analyses/:conversationId/:branchId` - Get analysis status/result
+- `POST /api/analyses/:conversationId/:branchId/regenerate` - Force regeneration
+
+**Implementation Status:**
+
+- ✅ Database schema (Migration 011)
+- ✅ API endpoints (Phase 2 - Task 2)
+- ✅ Prompt engineering (Phase 2 - Task 4)
+- ✅ Background worker (Phase 2 - Task 3)
+- ⏳ Dashboard UI (Phase 3)
+
+See [ADR-016](docs/04-Architecture/ADRs/adr-016-ai-powered-conversation-analysis.md) for architectural decisions.
+
+**Background Worker Configuration:**
+
+Enable the AI Analysis background worker by setting these environment variables:
+
+```bash
+# Enable the worker
+AI_WORKER_ENABLED=true
+
+# Worker configuration
+AI_WORKER_POLL_INTERVAL_MS=5000      # Poll every 5 seconds
+AI_WORKER_MAX_CONCURRENT_JOBS=3      # Process up to 3 jobs concurrently
+AI_WORKER_JOB_TIMEOUT_MINUTES=5      # Mark jobs as stuck after 5 minutes
+
+# Resilience configuration
+AI_ANALYSIS_MAX_RETRIES=3              # Retry failed jobs up to 3 times
+AI_ANALYSIS_GEMINI_REQUEST_TIMEOUT_MS=60000  # Gemini API request timeout
+
+# Gemini API configuration
+GEMINI_API_KEY=your-api-key-here
+GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models
+GEMINI_MODEL_NAME=gemini-2.0-flash-exp
+
+# Prompt engineering configuration (optional)
+AI_MAX_PROMPT_TOKENS=855000          # Override calculated token limit
+AI_HEAD_MESSAGES=10                  # Messages to keep from start
+AI_TAIL_MESSAGES=30                  # Messages to keep from end
+
+# Analysis token limits
+AI_ANALYSIS_INPUT_TRUNCATION_TARGET_TOKENS=8192   # Target token count for input message truncation
+AI_ANALYSIS_TRUNCATE_FIRST_N_TOKENS=1000  # Tokens from conversation start
+AI_ANALYSIS_TRUNCATE_LAST_M_TOKENS=4000   # Tokens from conversation end
+```
+
+The worker runs in-process with the proxy service and uses PostgreSQL row-level locking to safely process jobs across multiple instances.
 
 ### Spark Tool Integration
 

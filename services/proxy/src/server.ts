@@ -15,6 +15,7 @@ import { NotificationService } from './services/NotificationService.js'
 import { StorageAdapter } from './storage/StorageAdapter.js'
 import { MessageController } from './controllers/MessageController.js'
 import { tokenTracker } from './services/tokenTracker.js'
+import { startAnalysisWorker } from './workers/ai-analysis/index.js'
 
 // Create logger for this service
 const logger = createLogger({ service: 'proxy' })
@@ -84,6 +85,9 @@ async function startServer() {
   // Start token tracking
   tokenTracker.startReporting()
 
+  // Start AI Analysis Worker
+  const analysisWorker = startAnalysisWorker()
+
   // Start the server
   const server = serve({
     fetch: app.fetch,
@@ -115,6 +119,11 @@ async function startServer() {
     // Print final token stats
     tokenTracker.printStats()
     tokenTracker.stopReporting()
+
+    // Stop analysis worker
+    if (analysisWorker) {
+      await analysisWorker.stop()
+    }
 
     // Close storage service
     // Note: StorageAdapter doesn't have a close method,

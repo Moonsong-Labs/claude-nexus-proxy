@@ -140,6 +140,42 @@ export const config = {
     credentialCacheTTL: env.int('CREDENTIAL_CACHE_TTL', 3600000), // 1 hour
     credentialCacheSize: env.int('CREDENTIAL_CACHE_SIZE', 100),
   },
+
+  // AI Analysis configuration
+  aiAnalysis: {
+    // Gemini API configuration
+    geminiApiKey: env.string('GEMINI_API_KEY', ''),
+    geminiApiUrl: env.string(
+      'GEMINI_API_URL',
+      'https://generativelanguage.googleapis.com/v1beta/models'
+    ),
+    geminiModelName: env.string('GEMINI_MODEL_NAME', 'gemini-2.0-flash-exp'),
+
+    // Security configurations
+    maxRetries: env.int('AI_ANALYSIS_MAX_RETRIES', 2),
+    requestTimeoutMs: env.int('AI_ANALYSIS_REQUEST_TIMEOUT_MS', 60000), // 60 seconds
+
+    // Rate limiting
+    rateLimits: {
+      creation: env.int('AI_ANALYSIS_RATE_LIMIT_CREATION', 15), // 15 per minute
+      retrieval: env.int('AI_ANALYSIS_RATE_LIMIT_RETRIEVAL', 100), // 100 per minute
+    },
+
+    // Worker configuration
+    workerEnabled: env.bool('AI_WORKER_ENABLED', false),
+    workerPollIntervalMs: env.int('AI_WORKER_POLL_INTERVAL_MS', 5000),
+    workerMaxConcurrentJobs: env.int('AI_WORKER_MAX_CONCURRENT_JOBS', 3),
+    workerJobTimeoutMinutes: env.int('AI_WORKER_JOB_TIMEOUT_MINUTES', 5),
+
+    // Security features
+    enablePIIRedaction: env.bool('AI_ANALYSIS_ENABLE_PII_REDACTION', true),
+    enablePromptInjectionProtection: env.bool(
+      'AI_ANALYSIS_ENABLE_PROMPT_INJECTION_PROTECTION',
+      true
+    ),
+    enableOutputValidation: env.bool('AI_ANALYSIS_ENABLE_OUTPUT_VALIDATION', true),
+    enableAuditLogging: env.bool('AI_ANALYSIS_ENABLE_AUDIT_LOGGING', true),
+  },
 }
 
 // Validate required configuration
@@ -166,3 +202,11 @@ export function validateConfig(): void {
 
 // Export type for configuration
 export type Config = typeof config
+
+// Export AI analysis configuration
+export {
+  ANALYSIS_PROMPT_CONFIG,
+  GEMINI_CONFIG,
+  AI_WORKER_CONFIG,
+  AI_ANALYSIS_CONFIG,
+} from './ai-analysis.js'

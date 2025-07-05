@@ -14,6 +14,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Branch-specific statistics in conversation view
 - Database backup script with timestamp support
 - Comprehensive migration system with TypeScript support
+- AI-powered conversation analysis infrastructure
+  - New `conversation_analyses` table with ENUM status type
+  - Automatic timestamp management via trigger
+  - Optimized indexes for queue processing
+  - Phase 2 Task 4: Prompt Engineering implementation
+    - Smart truncation with tail-first priority
+    - @lenml/tokenizer-gemini for local token counting
+    - Zod schema validation for LLM responses
+    - Versioned prompt templates (v1)
+    - 855k token limit with 5% safety margin
+  - Migration 011 for schema creation
+  - Migration 012 for audit logging infrastructure
+  - Comprehensive security implementation with PII redaction, rate limiting, and prompt injection protection
+  - Security documentation with monitoring queries and best practices
 
 ### Changed
 

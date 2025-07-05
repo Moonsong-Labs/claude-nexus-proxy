@@ -131,9 +131,12 @@ requestDetailsRoutes.get('/request/:id', async c => {
         // Get API client from container for Spark API calls
         const apiClient = container.getApiClient()
         const sessionIds = sparkRecommendations.map(r => r.sessionId)
-        const feedbackResponse = await apiClient.post('/api/spark/feedback/batch', {
-          session_ids: sessionIds,
-        })
+        const feedbackResponse = await apiClient.post<{ results: Record<string, any> }>(
+          '/api/spark/feedback/batch',
+          {
+            session_ids: sessionIds,
+          }
+        )
 
         if (feedbackResponse.results) {
           sparkFeedbackMap = feedbackResponse.results

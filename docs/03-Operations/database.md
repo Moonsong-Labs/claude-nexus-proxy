@@ -61,6 +61,29 @@ Stores individual chunks from streaming responses.
 | token_count | INTEGER     | Tokens in this chunk        |
 | created_at  | TIMESTAMPTZ | Record creation timestamp   |
 
+### conversation_analyses
+
+Stores AI-generated analyses of conversations.
+
+| Column                 | Type                         | Description                                             |
+| ---------------------- | ---------------------------- | ------------------------------------------------------- |
+| id                     | BIGSERIAL                    | Primary key                                             |
+| conversation_id        | UUID                         | UUID of the conversation being analyzed                 |
+| branch_id              | VARCHAR(255)                 | Branch within conversation (default: 'main')            |
+| status                 | conversation_analysis_status | Processing status (pending/processing/completed/failed) |
+| model_used             | VARCHAR(255)                 | AI model used (default: 'gemini-2.5-pro')               |
+| analysis_content       | TEXT                         | Human-readable analysis text                            |
+| analysis_data          | JSONB                        | Structured analysis data in JSON format                 |
+| raw_response           | JSONB                        | Complete raw response from the AI model                 |
+| error_message          | TEXT                         | Error details if analysis failed                        |
+| retry_count            | INTEGER                      | Number of retry attempts (default: 0)                   |
+| generated_at           | TIMESTAMPTZ                  | Timestamp when analysis was completed                   |
+| processing_duration_ms | INTEGER                      | Time taken to generate analysis in milliseconds         |
+| prompt_tokens          | INTEGER                      | Number of tokens used in the prompt                     |
+| completion_tokens      | INTEGER                      | Number of tokens in the completion                      |
+| created_at             | TIMESTAMPTZ                  | Record creation timestamp                               |
+| updated_at             | TIMESTAMPTZ                  | Last update timestamp (auto-updated)                    |
+
 ## Indexes
 
 ### Performance Indexes
@@ -92,6 +115,11 @@ Stores individual chunks from streaming responses.
 ### Streaming Indexes
 
 - `idx_chunks_request_id` - Chunks by request
+
+### Conversation Analysis Indexes
+
+- `idx_conversation_analyses_status` - Partial index on pending status for queue processing
+- `idx_conversation_analyses_conversation` - Composite index on (conversation_id, branch_id)
 
 ## Key Features
 
@@ -129,6 +157,17 @@ The `request_type` column categorizes requests:
 - `inference` - Normal Claude API calls (2+ system messages)
 - `query_evaluation` - Special evaluation requests (0-1 system messages)
 - `quota` - Quota check requests (user message = "quota")
+
+### AI-Powered Conversation Analysis
+
+The `conversation_analyses` table enables automated analysis of conversations using AI models:
+
+- **Status Tracking**: ENUM type ensures only valid status values (pending, processing, completed, failed)
+- **Automatic Timestamps**: `updated_at` field automatically updates via trigger
+- **Unique Analyses**: UNIQUE constraint on (conversation_id, branch_id) prevents duplicates
+- **Token Tracking**: Monitors API usage for cost management
+- **Error Handling**: Tracks retry attempts and error messages for failed analyses
+- **Model Flexibility**: Supports different AI models through the `model_used` field
 
 ## Common Queries
 
@@ -203,6 +242,42 @@ WHERE is_subtask = true
 GROUP BY parent_task_request_id;
 ```
 
+### Conversation Analysis Queries
+
+```sql
+-- Get pending analyses for processing
+SELECT
+  conversation_id,
+  branch_id,
+  created_at
+FROM conversation_analyses
+WHERE status = 'pending'
+ORDER BY created_at
+LIMIT 10;
+
+-- Get analysis for a specific conversation
+SELECT
+  analysis_content,
+  analysis_data,
+  model_used,
+  generated_at,
+  prompt_tokens + completion_tokens as total_tokens
+FROM conversation_analyses
+WHERE conversation_id = 'uuid-here'
+  AND branch_id = 'main'
+  AND status = 'completed';
+
+-- Analysis statistics by model
+SELECT
+  model_used,
+  COUNT(*) as total_analyses,
+  AVG(processing_duration_ms) as avg_duration_ms,
+  SUM(prompt_tokens + completion_tokens) as total_tokens_used
+FROM conversation_analyses
+WHERE status = 'completed'
+GROUP BY model_used;
+```
+
 ## Schema Evolution
 
 ### Migration System
@@ -229,6 +304,12 @@ bun run scripts/db/migrations/003-add-subtask-tracking.ts
 4. **003-add-subtask-tracking.ts** - Adds sub-task detection support
 5. **004-optimize-conversation-window-functions.ts** - Window function indexes
 6. **005-populate-account-ids.ts** - Populates account IDs from domain mappings
+7. **006-split-conversation-hashes.ts** - Separates system prompt hashing
+8. **007-add-parent-request-id.ts** - Adds direct parent request linking
+9. **008-subtask-updates-and-task-indexes.ts** - Optimizes Task tool queries
+10. **009-add-response-body-gin-index.ts** - Creates GIN index for JSONB queries
+11. **010-add-temporal-awareness-indexes.ts** - Adds temporal query indexes
+12. **011-add-conversation-analyses.ts** - Creates AI analysis infrastructure
 
 See [ADR-012: Database Schema Evolution](../04-Architecture/ADRs/adr-012-database-schema-evolution.md) for details on the migration strategy.
 
