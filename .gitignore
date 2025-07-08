@@ -226,3 +226,7 @@ Thumbs.db
 
 # MCP sync info
 sync-info.json
+
+# Playwright
+playwright-report/
+test-results/

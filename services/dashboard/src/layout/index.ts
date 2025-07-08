@@ -49,6 +49,13 @@ export const layout = (
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css"
+          id="hljs-light-theme"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css"
+          id="hljs-dark-theme"
+          disabled
         />
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@andypf/json-viewer@2.1.10/dist/iife/index.js"></script>
@@ -73,6 +80,18 @@ export const layout = (
             --json-viewer-property-color: #1e40af;
             --json-viewer-bracket-color: #6b7280;
             --json-viewer-comma-color: #6b7280;
+          }
+
+          /* Dark mode JSON viewer colors */
+          [data-theme='dark'] andypf-json-viewer {
+            --json-viewer-key-color: #60a5fa;
+            --json-viewer-value-string-color: #34d399;
+            --json-viewer-value-number-color: #f87171;
+            --json-viewer-value-boolean-color: #a78bfa;
+            --json-viewer-value-null-color: #94a3b8;
+            --json-viewer-property-color: #60a5fa;
+            --json-viewer-bracket-color: #94a3b8;
+            --json-viewer-comma-color: #94a3b8;
           }
 
           /* Compact view - reduce padding on containers */
@@ -171,17 +190,99 @@ export const layout = (
         <nav>
           <div class="container">
             <h1>Claude Nexus Dashboard</h1>
-            <div class="space-x-4">
+            <div class="space-x-4" style="display: flex; align-items: center;">
               <a href="/dashboard" class="text-sm text-blue-600">Dashboard</a>
               <a href="/dashboard/requests" class="text-sm text-blue-600">Requests</a>
               <a href="/dashboard/token-usage" class="text-sm text-blue-600">Token Usage</a>
               <a href="/dashboard/prompts" class="text-sm text-blue-600">Prompts</a>
               <span class="text-sm text-gray-600" id="current-domain">All Domains</span>
               <a href="/dashboard/logout" class="text-sm text-blue-600">Logout</a>
+              <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
+                <svg
+                  id="theme-icon-light"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                  />
+                </svg>
+                <svg
+                  id="theme-icon-dark"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  style="display:none;"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
         </nav>
         <main class="container" style="padding: 2rem 1rem;">${content}</main>
+        <script>
+          // Dark mode functionality
+          ;(function () {
+            const themeToggle = document.getElementById('theme-toggle')
+            const lightIcon = document.getElementById('theme-icon-light')
+            const darkIcon = document.getElementById('theme-icon-dark')
+            const htmlElement = document.documentElement
+            const hljsLightTheme = document.getElementById('hljs-light-theme')
+            const hljsDarkTheme = document.getElementById('hljs-dark-theme')
+
+            // Check for saved theme preference or default to light mode
+            const currentTheme = localStorage.getItem('theme') || 'light'
+            htmlElement.setAttribute('data-theme', currentTheme)
+            updateTheme(currentTheme)
+
+            // Theme toggle functionality
+            themeToggle.addEventListener('click', function () {
+              const currentTheme = htmlElement.getAttribute('data-theme')
+              const newTheme = currentTheme === 'light' ? 'dark' : 'light'
+
+              htmlElement.setAttribute('data-theme', newTheme)
+              localStorage.setItem('theme', newTheme)
+              updateTheme(newTheme)
+            })
+
+            function updateTheme(theme) {
+              updateThemeIcon(theme)
+              updateHighlightTheme(theme)
+            }
+
+            function updateThemeIcon(theme) {
+              if (theme === 'dark') {
+                lightIcon.style.display = 'none'
+                darkIcon.style.display = 'block'
+              } else {
+                lightIcon.style.display = 'block'
+                darkIcon.style.display = 'none'
+              }
+            }
+
+            function updateHighlightTheme(theme) {
+              if (theme === 'dark') {
+                hljsLightTheme.disabled = true
+                hljsDarkTheme.disabled = false
+              } else {
+                hljsLightTheme.disabled = false
+                hljsDarkTheme.disabled = true
+              }
+            }
+          })()
+        </script>
       </body>
     </html>
   `

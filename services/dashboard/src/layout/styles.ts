@@ -2,16 +2,137 @@
  * Dashboard CSS styles
  */
 export const dashboardStyles = `
+  /* CSS Variables for theming */
+  :root {
+    /* Light theme colors */
+    --bg-primary: #f9fafb;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f3f4f6;
+    --bg-dark-section: #111827;
+    
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --text-link: #2563eb;
+    --text-link-hover: #1d4ed8;
+    
+    --border-color: #e5e7eb;
+    --border-color-light: #f3f4f6;
+    
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    
+    /* Button colors */
+    --btn-primary-bg: #3b82f6;
+    --btn-primary-hover: #2563eb;
+    --btn-secondary-bg: #6b7280;
+    --btn-secondary-hover: #4b5563;
+    
+    /* Status colors */
+    --color-success: #10b981;
+    --color-success-bg: #d1fae5;
+    --color-success-text: #065f46;
+    
+    --color-error: #ef4444;
+    --color-error-bg: #fee2e2;
+    --color-error-text: #991b1b;
+    
+    --color-warning: #f59e0b;
+    --color-warning-bg: #fef3c7;
+    --color-warning-text: #92400e;
+    
+    --color-info: #3b82f6;
+    --color-info-bg: #dbeafe;
+    --color-info-text: #1e40af;
+    
+    /* Message colors */
+    --msg-user-bg: #eff6ff;
+    --msg-user-border: #3b82f6;
+    --msg-assistant-bg: #ffffff;
+    --msg-assistant-border: #10b981;
+    --msg-assistant-response-bg: #f0fdf4;
+    --msg-assistant-response-border: #86efac;
+    --msg-tool-use-bg: #fef3c7;
+    --msg-tool-use-border: #f59e0b;
+    --msg-tool-result-bg: #dcfce7;
+    --msg-tool-result-border: #22c55e;
+    
+    /* Code block colors */
+    --code-bg: #1e293b;
+    --code-text: #e2e8f0;
+  }
+  
+  /* Dark theme */
+  [data-theme="dark"] {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-dark-section: #020617;
+    
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #94a3b8;
+    --text-link: #60a5fa;
+    --text-link-hover: #93bbfc;
+    
+    --border-color: #334155;
+    --border-color-light: #1e293b;
+    
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    
+    /* Button colors */
+    --btn-primary-bg: #2563eb;
+    --btn-primary-hover: #3b82f6;
+    --btn-secondary-bg: #475569;
+    --btn-secondary-hover: #64748b;
+    
+    /* Status colors */
+    --color-success: #10b981;
+    --color-success-bg: #064e3b;
+    --color-success-text: #6ee7b7;
+    
+    --color-error: #ef4444;
+    --color-error-bg: #7f1d1d;
+    --color-error-text: #fca5a5;
+    
+    --color-warning: #f59e0b;
+    --color-warning-bg: #78350f;
+    --color-warning-text: #fde68a;
+    
+    --color-info: #3b82f6;
+    --color-info-bg: #1e3a8a;
+    --color-info-text: #93bbfc;
+    
+    /* Message colors */
+    --msg-user-bg: #1e3a8a;
+    --msg-user-border: #3b82f6;
+    --msg-assistant-bg: #1e293b;
+    --msg-assistant-border: #10b981;
+    --msg-assistant-response-bg: #064e3b;
+    --msg-assistant-response-border: #34d399;
+    --msg-tool-use-bg: #78350f;
+    --msg-tool-use-border: #f59e0b;
+    --msg-tool-result-bg: #14532d;
+    --msg-tool-result-border: #22c55e;
+    
+    /* Code block colors */
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+  }
+  
   * {
     box-sizing: border-box;
   }
+  
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 16px;
     line-height: 1.5;
-    color: #1f2937;
-    background-color: #f9fafb;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
   .container {
     max-width: 1280px;
@@ -19,9 +140,9 @@ export const dashboardStyles = `
     padding: 0 1rem;
   }
   nav {
-    background: white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--bg-secondary);
+    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--border-color);
   }
   nav .container {
     display: flex;
@@ -47,14 +168,14 @@ export const dashboardStyles = `
     margin-bottom: 2rem;
   }
   .stat-card {
-    background: white;
+    background: var(--bg-secondary);
     padding: 1.5rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
   }
   .stat-label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
   .stat-value {
     font-size: 1.5rem;
@@ -63,18 +184,18 @@ export const dashboardStyles = `
   }
   .stat-meta {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--text-tertiary);
   }
 
   .section {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
     margin-bottom: 1.5rem;
   }
   .section-header {
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-color);
     font-weight: 500;
   }
   .section-content {
@@ -88,22 +209,22 @@ export const dashboardStyles = `
   th {
     text-align: left;
     padding: 0.75rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-color);
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
   td {
     padding: 0.75rem;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--border-color-light);
   }
   tr:hover {
-    background-color: #f9fafb;
+    background-color: var(--bg-tertiary);
   }
 
   .btn {
     display: inline-block;
     padding: 0.5rem 1rem;
-    background: #3b82f6;
+    background: var(--btn-primary-bg);
     color: white;
     text-decoration: none;
     border-radius: 0.375rem;
@@ -112,21 +233,22 @@ export const dashboardStyles = `
     cursor: pointer;
   }
   .btn:hover {
-    background: #2563eb;
+    background: var(--btn-primary-hover);
   }
   .btn-secondary {
-    background: #6b7280;
+    background: var(--btn-secondary-bg);
   }
   .btn-secondary:hover {
-    background: #4b5563;
+    background: var(--btn-secondary-hover);
   }
 
   select {
     padding: 0.5rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-color);
     border-radius: 0.375rem;
     font-size: 1rem;
-    background: white;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   /* Pagination styles */
@@ -297,7 +419,7 @@ export const dashboardStyles = `
     border: none;
     padding: 0.125rem;
     cursor: pointer;
-    color: #6b7280;
+    color: var(--text-secondary);
     transition: color 0.2s;
     width: 20px;
     height: 20px;
@@ -307,7 +429,7 @@ export const dashboardStyles = `
   }
 
   .nav-arrow:hover:not(:disabled) {
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .nav-arrow:disabled {
@@ -352,11 +474,11 @@ export const dashboardStyles = `
 
 
   .hide-tools .message-tool-use .message-content {
-    background: #fef3c7;
+    background: var(--msg-tool-use-bg);
   }
 
   .hide-tools .message-tool-result .message-content {
-    background: #dcfce7;
+    background: var(--msg-tool-result-bg);
   }
 
   /* Hide copy button for collapsed tool messages */
@@ -368,7 +490,7 @@ export const dashboardStyles = `
   /* Tool name label for collapsed messages */
   .tool-name-label {
     font-weight: 600;
-    color: #92400e;
+    color: var(--color-warning-text);
     margin-right: 0.5rem;
     display: inline-block;
     line-height: 1;
@@ -376,27 +498,27 @@ export const dashboardStyles = `
 
   .message-time {
     font-size: 0.675rem;
-    color: #9ca3af;
+    color: var(--text-tertiary);
   }
 
   /* Tool message styles */
   .message-tool-use .message-content {
-    background: #fef3c7;
-    border: 1px solid #fde68a;
-    border-left: 4px solid #f59e0b;
+    background: var(--msg-tool-use-bg);
+    border: 1px solid var(--msg-tool-use-border);
+    border-left: 4px solid var(--msg-tool-use-border);
   }
 
   .message-tool-result .message-content {
-    background: #dcfce7;
-    border: 1px solid #bbf7d0;
-    border-left: 4px solid #22c55e;
+    background: var(--msg-tool-result-bg);
+    border: 1px solid var(--msg-tool-result-border);
+    border-left: 4px solid var(--msg-tool-result-border);
   }
 
   /* Copy link button */
   .copy-message-link {
     background: none;
     border: none;
-    color: #9ca3af;
+    color: var(--text-tertiary);
     cursor: pointer;
     padding: 0.25rem;
     margin-top: 0.25rem;
@@ -404,33 +526,33 @@ export const dashboardStyles = `
   }
 
   .copy-message-link:hover {
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   /* Tool call styles */
   .tool-calls {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color);
   }
   
   .tool-call {
     margin-bottom: 0.5rem;
     padding: 0.5rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
     border-radius: 0.25rem;
     font-size: 0.75rem;
   }
   
   .tool-name {
     font-weight: 600;
-    color: #059669;
+    color: var(--color-success);
     margin-bottom: 0.25rem;
   }
   
   .tool-params {
-    background: #f3f4f6;
+    background: var(--bg-primary);
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
     font-family: monospace;
@@ -445,10 +567,10 @@ export const dashboardStyles = `
   }
 
   .detail-group {
-    background: white;
+    background: var(--bg-secondary);
     padding: 1.5rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
   }
 
   .detail-item {
@@ -457,7 +579,7 @@ export const dashboardStyles = `
 
   .detail-label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     margin-bottom: 0.25rem;
   }
 
@@ -469,8 +591,8 @@ export const dashboardStyles = `
   /* Token usage styles */
   .usage-chart {
     height: 300px;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     padding: 1rem;
     margin-bottom: 2rem;
@@ -478,7 +600,7 @@ export const dashboardStyles = `
 
   .usage-bar {
     height: 40px;
-    background: #f3f4f6;
+    background: var(--bg-tertiary);
     border-radius: 0.5rem;
     overflow: hidden;
     position: relative;
@@ -487,7 +609,7 @@ export const dashboardStyles = `
 
   .usage-fill {
     height: 100%;
-    background: #3b82f6;
+    background: var(--btn-primary-bg);
     transition: width 0.3s ease;
   }
 
@@ -498,7 +620,7 @@ export const dashboardStyles = `
     transform: translate(-50%, -50%);
     font-size: 0.875rem;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--text-primary);
   }
 
   /* Form styles */
@@ -506,9 +628,9 @@ export const dashboardStyles = `
     max-width: 400px;
     margin: 4rem auto;
     padding: 2rem;
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
   }
 
   .form-group {
@@ -520,22 +642,24 @@ export const dashboardStyles = `
     font-size: 0.875rem;
     font-weight: 500;
     margin-bottom: 0.5rem;
-    color: #374151;
+    color: var(--text-primary);
   }
 
   input[type="text"],
   input[type="password"] {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-color);
     border-radius: 0.375rem;
     font-size: 1rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   input[type="text"]:focus,
   input[type="password"]:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--btn-primary-bg);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -549,9 +673,11 @@ export const dashboardStyles = `
     width: 100%;
     padding: 0.75rem 1rem;
     padding-left: 2.5rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     font-size: 0.875rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   .search-icon {
@@ -559,7 +685,7 @@ export const dashboardStyles = `
     left: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #9ca3af;
+    color: var(--text-tertiary);
   }
 
   /* View toggle styles */
@@ -568,7 +694,7 @@ export const dashboardStyles = `
     justify-content: space-between;
     align-items: center;
     margin: 1rem 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 0;
   }
 
@@ -579,24 +705,24 @@ export const dashboardStyles = `
     border-bottom: 2px solid transparent;
     cursor: pointer;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     transition: all 0.2s;
   }
 
   .view-toggle button:hover {
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .view-toggle button.active {
-    color: #3b82f6;
-    border-bottom-color: #3b82f6;
+    color: var(--btn-primary-bg);
+    border-bottom-color: var(--btn-primary-bg);
   }
 
   /* Cost info styles */
   .cost-info {
     display: inline-flex;
     gap: 0.75rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .cost-info span {
@@ -609,7 +735,7 @@ export const dashboardStyles = `
   }
 
   .show-more-btn {
-    color: #3b82f6;
+    color: var(--text-link);
     cursor: pointer;
     font-size: 0.875rem;
     font-weight: 500;
@@ -618,7 +744,7 @@ export const dashboardStyles = `
   }
 
   .show-more-btn:hover {
-    color: #2563eb;
+    color: var(--text-link-hover);
   }
 
   /* Utility classes */
@@ -654,9 +780,9 @@ export const dashboardStyles = `
     flex-wrap: wrap;
     gap: 0;
     margin-bottom: 1.5rem;
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
     overflow: hidden;
   }
 
@@ -667,7 +793,7 @@ export const dashboardStyles = `
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    border-right: 1px solid #e5e7eb;
+    border-right: 1px solid var(--border-color);
   }
 
   .conversation-stat-card:last-child {
@@ -676,14 +802,14 @@ export const dashboardStyles = `
 
   .conversation-stat-label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     white-space: nowrap;
   }
 
   .conversation-stat-value {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--text-primary);
     margin-left: auto;
   }
 
@@ -694,7 +820,7 @@ export const dashboardStyles = `
     
     .conversation-stat-card {
       border-right: none;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid var(--border-color);
       min-width: 100%;
     }
     
@@ -741,10 +867,10 @@ export const dashboardStyles = `
   }
 
   .conversation-graph {
-    background: white;
+    background: var(--bg-secondary);
     padding: 1.5rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
     position: sticky;
     top: 1rem;
     max-height: calc(100vh - 2rem);
@@ -831,7 +957,7 @@ export const dashboardStyles = `
     height: 20px;
     border: 3px solid rgba(59, 130, 246, 0.3);
     border-radius: 50%;
-    border-top-color: #3b82f6;
+    border-top-color: var(--btn-primary-bg);
     animation: spin 1s ease-in-out infinite;
   }
 
@@ -841,8 +967,8 @@ export const dashboardStyles = `
 
   /* Code block styles */
   pre {
-    background: #1e293b;
-    color: #e2e8f0;
+    background: var(--code-bg);
+    color: var(--code-text);
     padding: 1rem;
     border-radius: 0.375rem;
     overflow-x: auto;
@@ -864,23 +990,23 @@ export const dashboardStyles = `
   }
 
   .badge-success {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
   }
 
   .badge-error {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--color-error-bg);
+    color: var(--color-error-text);
   }
 
   .badge-warning {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
   }
 
   .badge-info {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--color-info-bg);
+    color: var(--color-info-text);
   }
 
   /* Tool result images styling */
@@ -891,15 +1017,15 @@ export const dashboardStyles = `
     height: auto;
     margin: 0.75rem 0;
     border-radius: 0.5rem;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    background-color: #f9fafb;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    background-color: var(--bg-tertiary);
     object-fit: contain;
   }
 
   /* Add hover effect for images */
   .tool-result-image:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
     cursor: zoom-in;
   }
 
@@ -989,7 +1115,7 @@ export const dashboardStyles = `
 
   .prompt-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
   }
 
   .prompt-name {
@@ -1069,5 +1195,46 @@ export const dashboardStyles = `
 
   .status-value.never_synced {
     color: var(--text-muted);
+  }
+  
+  /* Dark mode toggle styles */
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+  }
+  
+  .theme-toggle:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+  
+  .theme-toggle svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  /* Dark mode specific code block adjustments */
+  [data-theme="dark"] .message-content pre,
+  [data-theme="dark"] .message-content code,
+  [data-theme="dark"] .conversation-container pre,
+  [data-theme="dark"] .conversation-container code {
+    background-color: var(--code-bg) !important;
+    color: var(--code-text) !important;
+    border-color: var(--border-color);
+  }
+  
+  [data-theme="dark"] .hljs {
+    background: transparent !important;
+    color: var(--code-text) !important;
   }
 `
