@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { getErrorMessage, config } from '@claude-nexus/shared'
+import { logger } from '../middleware/logger.js'
 
 export const sparkApiRoutes = new Hono()
 
@@ -93,7 +94,7 @@ sparkApiRoutes.get('/spark/sessions/:sessionId/feedback', async c => {
     const data = await response.json()
     return c.json(data as any)
   } catch (error) {
-    console.error('Error fetching feedback:', error)
+    logger.error('Error fetching feedback', { error: getErrorMessage(error) })
     return c.json({ error: getErrorMessage(error) || 'Failed to fetch feedback' }, 500)
   }
 })
@@ -133,7 +134,7 @@ sparkApiRoutes.post('/spark/feedback', async c => {
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid request data', details: error.errors }, 400)
     }
-    console.error('Error sending feedback:', error)
+    logger.error('Error sending feedback', { error: getErrorMessage(error) })
     return c.json({ error: getErrorMessage(error) || 'Failed to send feedback' }, 500)
   }
 })
@@ -187,7 +188,7 @@ sparkApiRoutes.post('/spark/feedback/batch', async c => {
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid request data', details: error.errors }, 400)
     }
-    console.error('Error fetching batch feedback:', error)
+    logger.error('Error fetching batch feedback', { error: getErrorMessage(error) })
     return c.json({ error: getErrorMessage(error) || 'Failed to fetch batch feedback' }, 500)
   }
 })

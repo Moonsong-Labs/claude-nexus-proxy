@@ -3,7 +3,7 @@ import path from 'path'
 import { ClaudeMessagesRequest } from '../types/claude'
 import { Context } from 'hono'
 import { config } from '@claude-nexus/shared/config'
-import { getRequestLogger } from '../middleware/logger'
+import { getRequestLogger, logger } from '../middleware/logger'
 
 interface TestSample {
   timestamp: string
@@ -140,11 +140,12 @@ export class TestSampleCollector {
       // Clean up from pending samples
       this.pendingSamples.delete(sampleId)
 
-      // Log completion (using import from logger module directly since we don't have context here)
-      // This is a debug message for test sample collection, not critical
+      logger.debug(`Test sample saved: ${pendingSample.filename}`)
     } catch (error) {
-      // Log error without context (this is for test sample collection, not critical path)
-      console.error('Failed to update test sample with response', error)
+      logger.error('Failed to update test sample with response', {
+        error: error instanceof Error ? error.message : String(error),
+        metadata: { sampleId },
+      })
     }
   }
 
