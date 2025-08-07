@@ -235,6 +235,10 @@ bun run typecheck
 # Run tests
 bun test
 
+# Run Playwright E2E (page rendering + console errors)
+# Requires dashboard to start (reads .env) and a reachable Postgres
+npx playwright test
+
 # Format code
 bun run format
 
