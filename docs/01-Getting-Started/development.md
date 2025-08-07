@@ -124,11 +124,32 @@ bun run build:shared
 
 ### Testing
 
-Run tests:
+Run unit/integration tests:
 
 ```bash
 bun test
 ```
+
+E2E testing (Playwright):
+
+```bash
+# One-time: install browsers
+npx playwright install --with-deps
+
+# Run all e2e tests (auto-starts dashboard on :3001)
+npm run test:playwright
+
+# UI mode for debugging
+npm run test:playwright:ui
+
+# Run a single spec
+npx playwright test e2e/pages-render.test.ts --project=chromium
+```
+
+Requirements:
+
+- PostgreSQL accessible and `.env` configured (DATABASE*URL or DB*\* variables)
+- Playwright config launches `bun run dev:dashboard` with base URL `http://localhost:3001`
 
 Test specific functionality:
 

@@ -22,7 +22,7 @@ The dashboard service provides a web UI for monitoring and analyzing Claude API 
 
 ## Development
 
-```bash
+````bash
 # Install dependencies
 cd services/dashboard
 bun install
@@ -35,6 +35,27 @@ bun run build
 
 # Run tests
 bun test
+
+### E2E (Playwright)
+
+Repository-level Playwright tests exercise the dashboard UI end-to-end.
+
+```bash
+# One-time: install Playwright browsers
+npx playwright install --with-deps
+
+# From repo root: run e2e tests (auto-starts dashboard on :3001)
+npm run test:playwright
+
+# UI mode
+npm run test:playwright:ui
+````
+
+Requirements:
+
+- A PostgreSQL instance and `.env` configured (DATABASE*URL or DB*\* vars)
+- The dashboard will be launched by Playwright via `bun run dev:dashboard`
+
 ```
 
 ## Configuration
@@ -73,3 +94,4 @@ The service provides read-only access to the database:
 - Dashboard routes with HTMX for dynamic updates
 - SSE for real-time monitoring
 - Chart.js for data visualization
+```

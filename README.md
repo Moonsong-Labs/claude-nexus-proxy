@@ -251,6 +251,26 @@ bun run ai:reset-stuck         # Reset jobs with high retry counts
 
 See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for development guidelines.
 
+### E2E Testing (Playwright)
+
+Playwright tests live under `/e2e` and validate dashboard pages render without console errors.
+
+```bash
+# One-time: install Playwright browsers
+npx playwright install --with-deps
+
+# Run all Playwright tests (auto-starts dashboard on :3001)
+npm run test:playwright
+
+# UI mode
+npm run test:playwright:ui
+
+# Run a single spec
+npx playwright test e2e/pages-render.test.ts --project=chromium
+```
+
+Requirements: a PostgreSQL instance and `.env` configured for the dashboard (DATABASE*URL or DB*\*). The Playwright config launches `bun run dev:dashboard` at `http://localhost:3001`.
+
 ## Deployment
 
 ### Environments (MoonsongLabs Internal)
