@@ -57,9 +57,8 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'bun run dev:dashboard',
+    command: 'bash -lc "cd services/dashboard && bun run dev:direct"',
     url: 'http://localhost:3001',
-    port: 3001,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
